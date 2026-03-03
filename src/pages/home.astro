@@ -1,18 +1,22 @@
 ---
 import Layout from '../layouts/Layout.astro';
-
-
+import Facts from '../components/Facts.astro';
 
 ---
 <Layout title="Landing">
   <div
     id="hero-mask"
-    class="masked flex items-center justify-center gap-10 h-full bg-linear-to-br from-gray-900 to-gray-950"
+    class="masked h-full "
   >
-    <img src="me.png" alt="me" class="h-80" />
-    <h1 class=" max-w-lg text-8xl font-bold bg-linear-to-r from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle">
-      Welcome to my portfolio
-    </h1>
+    <div id="content" class="h-full flex items-center justify-center gap-10  bg-linear-to-br from-gray-900 to-gray-950">
+      <img src="me.png" alt="me" class="h-8/12 drop-shadow-secondary/20 drop-shadow-xl" />
+      <div>
+        <h1 class=" max-w-lg text-8xl font-bold bg-linear-to-r from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
+          Welcome to my portfolio 
+        </h1>
+        <Facts server:defer/>
+      </div>
+    </div>
   </div>
 </Layout>
 
@@ -23,22 +27,42 @@ import Layout from '../layouts/Layout.astro';
   gsap.registerPlugin(ScrollTrigger);
 
   const heroMask = document.querySelector('#hero-mask');
+  const content = document.querySelector('#content');
 
   if (heroMask) {
-    gsap.to(
-      heroMask,
-      {
-        webkitMaskSize: '1%',
-        maskSize: '1%',
-        ease: 'none',
-        scrollTrigger: {
-          trigger: heroMask,
-          start: 'top top',
-          end: '+=4000',
-          scrub: true,
-          pin: true
-        }
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: heroMask,
+        start: 'top top',
+        end: '+=800',
+        scrub: 2,
+        pin: true
       }
-    );
+    });
+
+    
+    tl.to(heroMask, {
+      webkitMaskSize: '1%',
+      maskSize: '1%',
+      ease: 'sine.out',
+      duration: 1
+    });
+
+    // Luego, después de un pequeño retraso, escalamos
+    tl.to(content, {
+      scale: 15,
+      ease: 'power2.in',
+      duration: 1
+    }, '<0.2'); // El '<0.5' hace que esta animación comience 0.5 segundos antes de que termine la anterior
+    tl.to(heroMask, {
+      '--hero-before-opacity': 1,
+      ease: 'sine.out',
+      duration: 0.6,
+      onComplete: () => {
+        window.scrollTo(0, 0);
+        // window.history.pushState({}, '', '/gallery');
+        window.location.href = '/gallery';
+      }
+        }, '<0.2');
   }
 </script>

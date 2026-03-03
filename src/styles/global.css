@@ -1,6 +1,6 @@
 @import "tailwindcss";
 :root {
-  --landing-mask-size: 2000%;
+  --landing-mask-size: 1500%;
 }
 @theme {
   --color-primary: rgba(0, 101, 202, 1);
@@ -9,6 +9,9 @@
 } 
 
 .masked {
+  position: relative;
+  overflow: hidden;
+  --hero-before-opacity: 0;
   -webkit-mask-image: url('/sparks.svg');
   mask-image: url('/sparks.svg');
   -webkit-mask-repeat: no-repeat;
@@ -17,4 +20,25 @@
   mask-size:  var(--landing-mask-size);
   -webkit-mask-position: center;
   mask-position: center;
+  
+  /* text-shadow: 0 0 10px var(--color-primary), 
+               0 0 20px var(--color-secondary), 
+               0 0 30px var(--color-tertiary); */
+               
+  
+}
+
+.masked::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-secondary);
+  opacity: var(--hero-before-opacity);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.masked > * {
+  position: relative;
+  z-index: 1;
 }

@@ -1,0 +1,9 @@
+---
+const factsRaw = await fetch('https://meowfacts.herokuapp.com/?count=3')
+const {data:facts}: { data: string[] } = await factsRaw.json();
+
+---
+<h3>Facts</h3>
+<ul class="max-w-sm">
+  {facts.map(fact => <li>{fact}</li>)} 
+</ul>
