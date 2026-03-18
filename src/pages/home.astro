@@ -1,68 +1,51 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Facts from '../components/Facts.astro';
 
 ---
 <Layout title="Landing">
   <div
     id="hero-mask"
-    class="masked h-full "
+    class="masked h-full w-full"
   >
-    <div id="content" class="h-full flex items-center justify-center gap-10  bg-linear-to-br from-gray-900 to-gray-950">
-      <img src="me.png" alt="me" class="h-8/12 drop-shadow-secondary/20 drop-shadow-xl" />
-      <div>
-        <h1 class=" max-w-lg text-8xl font-bold bg-linear-to-r from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
+    <div id="content" class="h-full flex items-center justify-center gap-10 bg-linear-to-br from-gray-900 to-gray-950">
+      <img src="me.png" alt="me" class="h-8/12 drop-shadow-secondary/20 drop-shadow-xl " />
+        <h1 class=" max-w-lg text-8xl font-bold bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
           Welcome to my portfolio 
         </h1>
-        <Facts server:defer/>
-      </div>
     </div>
   </div>
+    <div id="three-overlay" aria-hidden="true"></div>
+  <!-- div used for trigger the onComplete event of the animation -->
+  <div class="h-px"></div>
+  <!-- link used for redirect with transitions -->
+  <a href="/menu" id="menu-link" />
 </Layout>
 
-<script>
-  import gsap from 'gsap';
-  import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-  gsap.registerPlugin(ScrollTrigger);
-
-  const heroMask = document.querySelector('#hero-mask');
-  const content = document.querySelector('#content');
-
-  if (heroMask) {
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: heroMask,
-        start: 'top top',
-        end: '+=800',
-        scrub: 2,
-        pin: true
-      }
-    });
-
-    
-    tl.to(heroMask, {
-      webkitMaskSize: '1%',
-      maskSize: '1%',
-      ease: 'sine.out',
-      duration: 1
-    });
-
-    // Luego, después de un pequeño retraso, escalamos
-    tl.to(content, {
-      scale: 15,
-      ease: 'power2.in',
-      duration: 1
-    }, '<0.2'); // El '<0.5' hace que esta animación comience 0.5 segundos antes de que termine la anterior
-    tl.to(heroMask, {
-      '--hero-before-opacity': 1,
-      ease: 'sine.out',
-      duration: 0.6,
-      onComplete: () => {
-        window.scrollTo(0, 0);
-        // window.history.pushState({}, '', '/gallery');
-        window.location.href = '/gallery';
-      }
-        }, '<0.2');
+<style>
+  #content{
+    transform: scale(1.5);
   }
+
+    #three-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.4s ease;
+      background: #020617;
+      pointer-events: none;
+    }
+
+    #three-overlay canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+</style>
+
+<script>
+  import { initializeHomeLandingScene } from '../lib/homeLandingScene';
+
+  initializeHomeLandingScene();
 </script>
