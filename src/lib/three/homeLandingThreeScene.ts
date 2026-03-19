@@ -67,21 +67,39 @@ const startRenderLoop = (
   tick();
 };
 
+const createGradientBackground = () => {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, size);
+  gradient.addColorStop(0, '#000000');
+  gradient.addColorStop(1, '#1b0041');
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+
+  return new THREE.CanvasTexture(canvas);
+};
+
 export const createHomeLandingThreeScene = (overlay: HTMLElement | null): LandingScene | null => {
   if (!overlay) {
     return null;
   }
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x020617);
+  scene.background = createGradientBackground();
   
   // add the axis helper to the scene
   const axesHelper = new THREE.AxesHelper(5);
   scene.add(axesHelper);
 
   const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.z = 4.1;
-  camera.position.y = -.5;
+  camera.position.z = 4.8;
+  camera.position.y = -.6;
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -102,9 +120,9 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.06;
-  controls.enablePan = false;
-  controls.minDistance = 2;
+  controls.minDistance = 0;
   controls.maxDistance = 30;
+  controls.enablePan = false;
 
   const diskRoot = new THREE.Group();
   diskRoot.scale.set(0.03, 0.03, 0.03);

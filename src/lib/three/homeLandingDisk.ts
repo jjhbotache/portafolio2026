@@ -137,8 +137,8 @@ const assignMaterialByPart = (
 };
 
 const applyDiskWobbleAnimation = (diskGroup: THREE.Mesh) => {
-  const diskRotation = THREE.MathUtils.degToRad(1);
-  const totalPoints = 10;
+  const diskRotation = THREE.MathUtils.degToRad(5);
+  const totalPoints = 20;
   const keyframes: Array<{ x: number; y: number }> = [];
 
   for (let i = 1; i <= totalPoints; i++) {
@@ -154,7 +154,7 @@ const applyDiskWobbleAnimation = (diskGroup: THREE.Mesh) => {
 
   gsap.to(diskGroup.rotation, {
     keyframes,
-    duration: 2,
+    duration: 6,
     ease: 'none',
     repeat: -1,
   });

@@ -28,10 +28,10 @@ html, body {
 }
 
 @theme {
-  --color-primary: rgba(0, 101, 202, 1);
-  --color-secondary: rgba(0, 181, 232, 1);
-  --color-tertiary: rgba(159, 32, 225, 1);
-} 
+  --color-primary: #0065ca;
+  --color-secondary: #00b5e8;
+  --color-tertiary: #9f20e1;
+}
 
 .masked {
   position: relative;

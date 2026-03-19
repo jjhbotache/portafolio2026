@@ -3,18 +3,21 @@ import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 
 const PLATFORM_NEON_PART_INDEXES = new Set([1]);
 const FLOOR_NEON_PART_INDEXES = new Set([0]);
+const FLOOR_SCALE = 0.3;
+const FLOOR_Y = -6;
+const FLOOR_ROTATION_X = THREE.MathUtils.degToRad(270);
 
 const createEnvironmentMaterials = () => {
   const darkMaterial = new THREE.MeshStandardMaterial({
     color: 0x000000,
     metalness: 1,
-    roughness: 0.2,
+    roughness: 0,
   });
 
   const neonMaterial = new THREE.MeshStandardMaterial({
     color: 0xff1fe5,
     emissive: 0x68d9ff,
-    emissiveIntensity: 0.01,
+    emissiveIntensity: 0.04,
     roughness: 0.8,
     metalness: 0.2,
   });
@@ -156,6 +159,56 @@ const loadCompositeStl = (
   });
 };
 
+const calculateFloorTileSpacing = (geometry: THREE.BufferGeometry) => {
+  geometry.computeBoundingBox();
+
+  const boundingBox = geometry.boundingBox;
+  if (!boundingBox) {
+    return { x: 0, z: 0 };
+  }
+
+  const transformedBox = boundingBox.clone();
+  const transform = new THREE.Matrix4()
+    .makeRotationX(FLOOR_ROTATION_X)
+    .scale(new THREE.Vector3(FLOOR_SCALE, FLOOR_SCALE, FLOOR_SCALE));
+
+  transformedBox.applyMatrix4(transform);
+
+  const size = new THREE.Vector3();
+  transformedBox.getSize(size);
+
+  return { x: size.x, z: size.z };
+};
+
+const createFloorGrid = (loader: STLLoader, scene: THREE.Scene) => {
+  const { darkMaterial, neonMaterial } = createEnvironmentMaterials();
+
+  loader.load('/3d/floor.stl', (geometry) => {
+    const { components, positions } = splitGeometryIntoComponents(geometry);
+    const componentGeometries = components.map((componentFaces) =>
+      buildComponentGeometry(componentFaces, positions),
+    );
+
+    const { x: spacingX, z: spacingZ } = calculateFloorTileSpacing(geometry);
+
+    for (let gridX = -1; gridX <= 1; gridX++) {
+      for (let gridZ = -1; gridZ <= 1; gridZ++) {
+        const floorRoot = new THREE.Group();
+        floorRoot.scale.set(FLOOR_SCALE, FLOOR_SCALE, FLOOR_SCALE);
+        floorRoot.rotation.set(FLOOR_ROTATION_X, 0, 0);
+        floorRoot.position.set(gridX * spacingX, FLOOR_Y, gridZ * spacingZ);
+        scene.add(floorRoot);
+
+        componentGeometries.forEach((componentGeometry, partIndex) => {
+          const material = assignMaterialByPart(partIndex, FLOOR_NEON_PART_INDEXES, neonMaterial, darkMaterial);
+          const mesh = new THREE.Mesh(componentGeometry, material);
+          floorRoot.add(mesh);
+        });
+      }
+    }
+  });
+};
+
 export const loadLandingEnvironment = (scene: THREE.Scene) => {
   const loader = new STLLoader();
 
@@ -165,12 +218,6 @@ export const loadLandingEnvironment = (scene: THREE.Scene) => {
   platformRoot.position.set(0, -3, 0);
   scene.add(platformRoot);
 
-  const floorRoot = new THREE.Group();
-  floorRoot.scale.set(.3, .3, .3);
-  floorRoot.rotation.set(THREE.MathUtils.degToRad(270), 0, 0);
-  floorRoot.position.set(0, -6, 0);
-  scene.add(floorRoot);
-
   loadCompositeStl(loader, '/3d/platform.stl', platformRoot, PLATFORM_NEON_PART_INDEXES);
-  loadCompositeStl(loader, '/3d/floor.stl', floorRoot, FLOOR_NEON_PART_INDEXES);
+  createFloorGrid(loader, scene);
 };
