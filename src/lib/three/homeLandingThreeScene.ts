@@ -12,6 +12,15 @@ export type LandingScene = {
   camera: THREE.PerspectiveCamera;
 };
 
+export function resetCameraToInitialPosition(camera: THREE.PerspectiveCamera) {
+  camera.position.x = -.75;
+  camera.position.z = -1;
+  camera.position.y = 3;
+  // zoom the camera in a bit
+  camera.zoom = 5;
+  camera.updateProjectionMatrix();
+}
+
 const addLights = (scene: THREE.Scene, helpers = false) => {
   const keyLight = new THREE.PointLight(0x59a5ff, 80, 30);
   keyLight.position.set(1.5, 3, 2);
@@ -95,11 +104,10 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
   
   // add the axis helper to the scene
   const axesHelper = new THREE.AxesHelper(5);
-  scene.add(axesHelper);
+  // scene.add(axesHelper);
 
   const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.z = 4.8;
-  camera.position.y = -.6;
+  resetCameraToInitialPosition(camera);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -123,6 +131,7 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
   controls.minDistance = 0;
   controls.maxDistance = 30;
   controls.enablePan = false;
+  controls.enableZoom = false;
 
   const diskRoot = new THREE.Group();
   diskRoot.scale.set(0.03, 0.03, 0.03);
@@ -132,7 +141,7 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
 
   loadLandingDisk(diskRoot);
   loadLandingEnvironment(scene);
-  addLights(scene,true);
+  addLights(scene);
   setupResize(camera, renderer, composer, bloomPass);
   startRenderLoop(controls, composer);
 
