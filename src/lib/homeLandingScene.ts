@@ -16,7 +16,7 @@ const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | nu
     gsap.to(landingScene.overlay, {
       autoAlpha: 0,
       pointerEvents: 'none',
-      duration: 0.5,
+      duration: 0.2,
       ease: 'none',
       onComplete: () => {
         resetCameraToInitialPosition(landingScene.camera);

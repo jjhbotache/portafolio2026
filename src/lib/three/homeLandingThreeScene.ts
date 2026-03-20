@@ -4,7 +4,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { loadLandingDisk } from './homeLandingDisk';
-import { loadLandingEnvironment } from './homeLandingEnvironment';
+import { createLandingStarField, loadLandingEnvironment } from './homeLandingEnvironment';
 
 export type LandingScene = {
   overlay: HTMLElement;
@@ -38,9 +38,39 @@ const addLights = (scene: THREE.Scene, helpers = false) => {
     scene.add(directLightHelper);
   }
 
-
-  const ambientLight = new THREE.AmbientLight(0x2047ff, 50);
+  const ambientLight = new THREE.AmbientLight(0x2047ff, 60);
   scene.add(ambientLight);
+};
+
+const setupIdleCameraOrbit = (controls: OrbitControls) => {
+  const idleDelayMs = 5000;
+  let resumeOrbitTimeoutId: number | null = null;
+
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = -.2;
+
+  const clearResumeTimeout = () => {
+    if (resumeOrbitTimeoutId !== null) {
+      window.clearTimeout(resumeOrbitTimeoutId);
+      resumeOrbitTimeoutId = null;
+    }
+  };
+
+  const pauseOrbit = () => {
+    controls.autoRotate = false;
+    clearResumeTimeout();
+  };
+
+  const scheduleOrbitResume = () => {
+    clearResumeTimeout();
+    resumeOrbitTimeoutId = window.setTimeout(() => {
+      controls.autoRotate = true;
+      resumeOrbitTimeoutId = null;
+    }, idleDelayMs);
+  };
+
+  controls.addEventListener('start', pauseOrbit);
+  controls.addEventListener('end', scheduleOrbitResume);
 };
 
 const setupResize = (
@@ -66,8 +96,13 @@ const setupResize = (
 const startRenderLoop = (
   controls: OrbitControls,
   composer: EffectComposer,
+  animate?: (elapsedTime: number) => void,
 ) => {
+  const clock = new THREE.Clock();
+
   const tick = () => {
+    const elapsedTime = clock.getElapsedTime();
+    animate?.(elapsedTime);
     controls.update();
     composer.render();
     requestAnimationFrame(tick);
@@ -101,7 +136,7 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
 
   const scene = new THREE.Scene();
   scene.background = createGradientBackground();
-  
+
   // add the axis helper to the scene
   const axesHelper = new THREE.AxesHelper(5);
   // scene.add(axesHelper);
@@ -130,8 +165,10 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
   controls.dampingFactor = 0.06;
   controls.minDistance = 0;
   controls.maxDistance = 30;
-  controls.enablePan = false;
-  controls.enableZoom = false;
+  controls.target.set(0, 0, 0);
+  setupIdleCameraOrbit(controls);
+  // controls.enablePan = false;
+  // controls.enableZoom = false;
 
   const diskRoot = new THREE.Group();
   diskRoot.scale.set(0.03, 0.03, 0.03);
@@ -141,9 +178,13 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
 
   loadLandingDisk(diskRoot);
   loadLandingEnvironment(scene);
+
+  const { starField, animate } = createLandingStarField();
+  scene.add(starField);
+
   addLights(scene);
   setupResize(camera, renderer, composer, bloomPass);
-  startRenderLoop(controls, composer);
+  startRenderLoop(controls, composer, animate);
 
   return { overlay, diskRoot, camera };
 };

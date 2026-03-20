@@ -209,6 +209,54 @@ const createFloorGrid = (loader: STLLoader, scene: THREE.Scene) => {
   });
 };
 
+export const createLandingStarField = () => {
+  const starsGeometry = new THREE.BufferGeometry();
+  const starCount = 800;
+  const minDistanceFromCenter = 10;
+  const positions = new Float32Array(starCount * 3);
+
+  for (let i = 0; i < starCount; i += 1) {
+    const i3 = i * 3;
+    let x = 0;
+    let y = 0;
+    let z = 0;
+
+    // Keep stars outside a minimum radius from the scene center.
+    do {
+      x = THREE.MathUtils.randFloatSpread(120);
+      y = THREE.MathUtils.randFloatSpread(80);
+      z = THREE.MathUtils.randFloatSpread(120);
+    } while (Math.sqrt(x * x + y * y + z * z) < minDistanceFromCenter);
+
+    positions[i3] = x;
+    positions[i3 + 1] = y;
+    positions[i3 + 2] = z;
+  }
+
+  starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+  const starsMaterial = new THREE.PointsMaterial({
+    color: 0xd9ecff,
+    size: 0.15,
+    transparent: true,
+    opacity: 0.9,
+    sizeAttenuation: true,
+    depthWrite: false,
+  });
+
+  const starField = new THREE.Points(starsGeometry, starsMaterial);
+
+  return {
+    starField,
+    animate: (elapsedTime: number) => {
+      // Very subtle movement to keep a calm sky feeling.
+      starField.rotation.y = elapsedTime * 0.008;
+      starField.rotation.x = Math.sin(elapsedTime * 0.05) * 0.01;
+      starsMaterial.opacity = 0.82 + Math.sin(elapsedTime * 0.4) * 0.08;
+    },
+  };
+};
+
 export const loadLandingEnvironment = (scene: THREE.Scene) => {
   const loader = new STLLoader();
 
