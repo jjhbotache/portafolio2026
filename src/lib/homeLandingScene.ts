@@ -12,6 +12,7 @@ const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | nu
   // executed when the user scrolls back up
   function reset3D () {
     if (!landingScene) return;
+    landingScene.hideTitles();
     // reset visibility of the overlay
     gsap.to(landingScene.overlay, {
       autoAlpha: 0,
@@ -30,7 +31,7 @@ const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | nu
         SpaceIntroPlayed = true;
         landingScene && SpaceIntroAnimation3D(landingScene);
         setTimeout(() => {
-          window.scrollTo(0, 650);
+          window.scrollTo(0, 850);
         }, 2000);
   }
   
@@ -46,7 +47,7 @@ const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | nu
     scrollTrigger: {
       trigger: heroMask,
       start: 'top top',
-      end: '+=600',
+      end: '+=845',
       scrub: 1,
       pin: true,
       onEnterBack: reset3D
@@ -84,6 +85,7 @@ const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | nu
     duration: 0.5,
   }, 0.2);
 
+
 };
 
 function SpaceIntroAnimation3D(landingScene: LandingScene) {
@@ -95,6 +97,9 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
     defaults: {
       ease: 'none',
     },
+    onComplete: () => {
+      landingScene.showTitles();
+    }
   });
 
   const cameraPathAnchors = [
@@ -112,7 +117,7 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
 
   const samplesCount = MathUtils.clamp(Math.round(totalPathDistance * 8), 40, 140);
   const sampledPoints = cameraPathCurve.getPoints(samplesCount);
-  const moveDuration = 3;
+  const moveDuration = 2;
   const stepDuration = moveDuration / samplesCount;
 
   const cameraKeyframes = sampledPoints.slice(1).map((point) => ({

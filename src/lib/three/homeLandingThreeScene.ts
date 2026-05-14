@@ -5,11 +5,14 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { loadLandingDisk } from './homeLandingDisk';
 import { createLandingStarField, loadLandingEnvironment } from './homeLandingEnvironment';
+import { createLandingTitles } from './homeLandingTitles';
 
 export type LandingScene = {
   overlay: HTMLElement;
   diskRoot: THREE.Group;
   camera: THREE.PerspectiveCamera;
+  showTitles: () => void;
+  hideTitles: () => void;
 };
 
 export function resetCameraToInitialPosition(camera: THREE.PerspectiveCamera) {
@@ -36,6 +39,14 @@ const addLights = (scene: THREE.Scene, helpers = false) => {
   if (helpers) {
     const directLightHelper = new THREE.DirectionalLightHelper(directLight, 0.5);
     scene.add(directLightHelper);
+  }
+  
+  const directLight2 = new THREE.DirectionalLight(0x68d9ff, 30);
+  directLight2.position.set(0, 15, 0);
+  scene.add(directLight2);
+  if (helpers) {
+    const directLightHelper2 = new THREE.DirectionalLightHelper(directLight2, 0.5);
+    scene.add(directLightHelper2);
   }
 
   const ambientLight = new THREE.AmbientLight(0x2047ff, 60);
@@ -93,22 +104,40 @@ const setupResize = (
   window.addEventListener('resize', onResize);
 };
 
+let lastFrameTime = 0;
+const targetFPS = 20; // Cambia a 24, 20, etc. según lo que quieras
+const frameDuration = 1000 / targetFPS;
+
 const startRenderLoop = (
   controls: OrbitControls,
   composer: EffectComposer,
   animate?: (elapsedTime: number) => void,
 ) => {
-  const clock = new THREE.Clock();
+  const clock = new THREE.Timer();
 
-  const tick = () => {
-    const elapsedTime = clock.getElapsedTime();
+  // // const tick = () => {
+  // //   const elapsedTime = clock.getElapsed();
+  // //   animate?.(elapsedTime);
+  // //   controls.update();
+  // //   composer.render();
+  // //   requestAnimationFrame(tick);
+  // // };
+
+  // // tick();
+  
+  // reduce FPS
+  function tick() {
+  const now = performance.now();
+  if (now - lastFrameTime >= frameDuration) {
+    lastFrameTime = now;
+    const elapsedTime = clock.getElapsed();
     animate?.(elapsedTime);
     controls.update();
     composer.render();
-    requestAnimationFrame(tick);
-  };
-
-  tick();
+  }
+  requestAnimationFrame(tick);
+}
+tick();
 };
 
 const createGradientBackground = () => {
@@ -136,6 +165,11 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
 
   const scene = new THREE.Scene();
   scene.background = createGradientBackground();
+  
+  // create an sphere and apply some material
+  // const sphereGeometry = new THREE.SphereGeometry(5, 32, 32);
+  // const sphereMesh = new THREE.Mesh(sphereGeometry, materialFactory('floorDark'));
+  // scene.add(sphereMesh);
 
   // add the axis helper to the scene
   const axesHelper = new THREE.AxesHelper(5);
@@ -165,6 +199,8 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
   controls.dampingFactor = 0.06;
   controls.minDistance = 0;
   controls.maxDistance = 30;
+  controls.enablePan = false;
+  controls.enableZoom = false;
   controls.target.set(0, 0, 0);
   setupIdleCameraOrbit(controls);
   // controls.enablePan = false;
@@ -182,9 +218,26 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
   const { starField, animate } = createLandingStarField();
   scene.add(starField);
 
+  const titles = createLandingTitles(scene, camera);
+
   addLights(scene);
   setupResize(camera, renderer, composer, bloomPass);
-  startRenderLoop(controls, composer, animate);
+  startRenderLoop(controls, composer, (elapsedTime) => {
+    animate(elapsedTime);
+    titles.updateFromCamera(elapsedTime);
+  });
 
-  return { overlay, diskRoot, camera };
+  const onPageHide = () => {
+    titles.dispose();
+  };
+
+  window.addEventListener('pagehide', onPageHide, { once: true });
+
+  return {
+    overlay,
+    diskRoot,
+    camera,
+    showTitles: titles.show,
+    hideTitles: titles.hide,
+  };
 };

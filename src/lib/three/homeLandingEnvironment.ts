@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { addPlanarUvs, materialFactory } from './materialFactory';
 
 const PLATFORM_NEON_PART_INDEXES = new Set([1]);
 const FLOOR_NEON_PART_INDEXES = new Set([0]);
@@ -7,23 +8,8 @@ const FLOOR_SCALE = 0.3;
 const FLOOR_Y = -6;
 const FLOOR_ROTATION_X = THREE.MathUtils.degToRad(270);
 
-const createEnvironmentMaterials = () => {
-  const darkMaterial = new THREE.MeshStandardMaterial({
-    color: 0x000000,
-    metalness: 1,
-    roughness: 0,
-  });
 
-  const neonMaterial = new THREE.MeshStandardMaterial({
-    color: 0xff1fe5,
-    emissive: 0x68d9ff,
-    emissiveIntensity: 0.04,
-    roughness: 0.8,
-    metalness: 0.2,
-  });
 
-  return { darkMaterial, neonMaterial };
-};
 
 const splitGeometryIntoComponents = (geometry: THREE.BufferGeometry) => {
   geometry.computeVertexNormals();
@@ -121,22 +107,10 @@ const buildComponentGeometry = (componentFaces: number[], positions: Float32Arra
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(outPositions, 3));
+  addPlanarUvs(geometry);
   geometry.computeVertexNormals();
 
   return geometry;
-};
-
-const assignMaterialByPart = (
-  partIndex: number,
-  neonIndexes: Set<number>,
-  neonMaterial: THREE.MeshStandardMaterial,
-  darkMaterial: THREE.MeshStandardMaterial,
-) => {
-  if (neonIndexes.has(partIndex)) {
-    return neonMaterial;
-  }
-
-  return darkMaterial;
 };
 
 const loadCompositeStl = (
@@ -144,16 +118,16 @@ const loadCompositeStl = (
   filePath: string,
   targetRoot: THREE.Group,
   neonIndexes: Set<number>,
+  neonMaterialName: 'platformNeon' | 'floorNeon',
+  darkMaterialName: 'platformDark' | 'floorDark',
 ) => {
-  const { darkMaterial, neonMaterial } = createEnvironmentMaterials();
-
   loader.load(filePath, (geometry) => {
     const { components, positions } = splitGeometryIntoComponents(geometry);
 
     components.forEach((componentFaces, partIndex) => {
       const componentGeometry = buildComponentGeometry(componentFaces, positions);
-      const material = assignMaterialByPart(partIndex, neonIndexes, neonMaterial, darkMaterial);
-      const mesh = new THREE.Mesh(componentGeometry, material);
+      const materialName = neonIndexes.has(partIndex) ? neonMaterialName : darkMaterialName;
+      const mesh = new THREE.Mesh(componentGeometry, materialFactory(materialName));
       targetRoot.add(mesh);
     });
   });
@@ -181,8 +155,6 @@ const calculateFloorTileSpacing = (geometry: THREE.BufferGeometry) => {
 };
 
 const createFloorGrid = (loader: STLLoader, scene: THREE.Scene) => {
-  const { darkMaterial, neonMaterial } = createEnvironmentMaterials();
-
   loader.load('/3d/floor.stl', (geometry) => {
     const { components, positions } = splitGeometryIntoComponents(geometry);
     const componentGeometries = components.map((componentFaces) =>
@@ -200,8 +172,10 @@ const createFloorGrid = (loader: STLLoader, scene: THREE.Scene) => {
         scene.add(floorRoot);
 
         componentGeometries.forEach((componentGeometry, partIndex) => {
-          const material = assignMaterialByPart(partIndex, FLOOR_NEON_PART_INDEXES, neonMaterial, darkMaterial);
-          const mesh = new THREE.Mesh(componentGeometry, material);
+          const isNeonPart = FLOOR_NEON_PART_INDEXES.has(partIndex);
+          const materialName = isNeonPart ? 'floorNeon' : 'floorDark';
+          const mesh = new THREE.Mesh(componentGeometry, materialFactory(materialName));
+
           floorRoot.add(mesh);
         });
       }
@@ -266,6 +240,14 @@ export const loadLandingEnvironment = (scene: THREE.Scene) => {
   platformRoot.position.set(0, -3, 0);
   scene.add(platformRoot);
 
-  loadCompositeStl(loader, '/3d/platform.stl', platformRoot, PLATFORM_NEON_PART_INDEXES);
+  loadCompositeStl(
+    loader,
+    '/3d/platform.stl',
+    platformRoot,
+    PLATFORM_NEON_PART_INDEXES,
+    'platformNeon',
+    'platformDark',
+  );
   createFloorGrid(loader, scene);
+  
 };

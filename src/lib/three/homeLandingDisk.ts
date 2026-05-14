@@ -1,27 +1,9 @@
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import gsap from 'gsap';
+import { addPlanarUvs, materialFactory } from './materialFactory';
 
 const NEON_PART_INDEXES = new Set([0, 3]);
-
-const createDiskMaterials = () => {
-  const darkDiskMaterial = new THREE.MeshStandardMaterial({
-    color: 0x787878,
-    metalness: 1,
-    roughness: 0,
-    // envMapIntensity: 0,
-  });
-
-  const neonDiskMaterial = new THREE.MeshStandardMaterial({
-    color: 0x68d9ff,
-    emissive: 0x68d9ff,
-    emissiveIntensity: 0.2,
-    roughness: 0.8,
-    metalness: 0.2,
-  });
-
-  return { darkDiskMaterial, neonDiskMaterial };
-};
 
 const splitGeometryIntoComponents = (geometry: THREE.BufferGeometry) => {
   geometry.computeVertexNormals();
@@ -124,18 +106,6 @@ const buildComponentGeometry = (componentFaces: number[], positions: Float32Arra
   return geometry;
 };
 
-const assignMaterialByPart = (
-  partIndex: number,
-  neonDiskMaterial: THREE.MeshStandardMaterial,
-  darkDiskMaterial: THREE.MeshStandardMaterial,
-) => {
-  if (NEON_PART_INDEXES.has(partIndex)) {
-    return neonDiskMaterial;
-  }
-
-  return darkDiskMaterial;
-};
-
 const applyDiskWobbleAnimation = (diskGroup: THREE.Mesh) => {
   const diskRotation = THREE.MathUtils.degToRad(5);
   const totalPoints = 20;
@@ -161,7 +131,6 @@ const applyDiskWobbleAnimation = (diskGroup: THREE.Mesh) => {
 };
 
 export const loadLandingDisk = (diskRoot: THREE.Group) => {
-  const { darkDiskMaterial, neonDiskMaterial } = createDiskMaterials();
   const stlLoader = new STLLoader();
 
   
@@ -171,10 +140,13 @@ export const loadLandingDisk = (diskRoot: THREE.Group) => {
 
     components.forEach((componentFaces, partIndex) => {
       const componentGeometry = buildComponentGeometry(componentFaces, positions);
-      const material = assignMaterialByPart(partIndex, neonDiskMaterial, darkDiskMaterial);
-      const mesh = new THREE.Mesh(componentGeometry, material);
+      const materialName = NEON_PART_INDEXES.has(partIndex) ? 'diskNeon' : 'diskDark';
+      addPlanarUvs(componentGeometry);
+      const mesh = new THREE.Mesh(componentGeometry, materialFactory(materialName));
       applyDiskWobbleAnimation(mesh);
       diskRoot.add(mesh);
     });
   });
+  
+  
 };
