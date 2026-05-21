@@ -4,23 +4,20 @@ el david pensando
 
 import * as THREE from 'three';
 import type { TitleBackgroundController } from './types';
-import { cloneBackdropModel } from './shared';
+import { cloneBackdropModel, placeBackdropBehindTitle } from './shared';
 import { addPlanarUvs, materialFactory } from '../materialFactory';
 import gsap from 'gsap';
 
-const ABOUT_ME_ROTATION_SMOOTHING = 0.9;
-const ABOUT_ME_SPIN_MULTIPLIER = 6;
+const ABOUT_ME_SPIN_MULTIPLIER = 4;
 const ABOUT_ME_MIN_ROTATION_DELTA = 0.0001;
 const ABOUT_ME_MODEL_PATHS = ['/3d/man_thinking.stl'] as const;
 
 export const createAboutMeBackground = (): TitleBackgroundController => {
-  let orientationRoot: THREE.Group | null = null;
-  let spinRoot: THREE.Group | null = null;
   let backdropMaterials: THREE.Material[] | null = null;
   let showTween: gsap.core.Tween | null = null;
   let previousCameraYaw: number | null = null;
-  const modelCenter = new THREE.Vector3();
-  const modelBounds = new THREE.Box3();
+  let groupToBeSpinned: THREE.Group | null = null;
+  
 
   return {
     modelPaths: ABOUT_ME_MODEL_PATHS,
@@ -45,6 +42,7 @@ export const createAboutMeBackground = (): TitleBackgroundController => {
         (material as THREE.Material).depthWrite = false as any;
         material.needsUpdate = true;
       });
+      
 
       // keep a reference to materials so we can animate them on show/hide
       backdropMaterials = materials;
@@ -59,32 +57,31 @@ export const createAboutMeBackground = (): TitleBackgroundController => {
         }
       });
 
-      model.position.y = -40;
-      model.rotation.x = -Math.PI / 2;
-      model.scale.setScalar(0.85);
+      model.rotation.x = THREE.MathUtils.degToRad(-90);
+      model.rotation.z = THREE.MathUtils.degToRad(180);
       
       
       
       
+      groupToBeSpinned = new THREE.Group();
+      groupToBeSpinned.add(model);
       
-      modelBounds.setFromObject(model).getCenter(modelCenter);
-
-      orientationRoot = new THREE.Group();
-      spinRoot = new THREE.Group();
-      spinRoot.position.copy(modelCenter);
-      model.position.sub(modelCenter);
-      spinRoot.add(model);
-      orientationRoot.add(spinRoot);
+      // align the model center to its group center
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      model.position.sub(center);
+              
+      placeBackdropBehindTitle(groupToBeSpinned, titleSize,{scaleFactor: 8,yOffset: 20});
       
-
-      previousCameraYaw = null;
-
-      backdropGroup.clear();
-      backdropGroup.add(orientationRoot);
+      
+      backdropGroup.add(groupToBeSpinned);
 
       return materials;
     },
     onShow: () => {
+      // always start in the correct angle
+      groupToBeSpinned?.rotation.set(0, 0, 0);
+      
       previousCameraYaw = null;
 
       if (backdropMaterials) {
@@ -132,33 +129,29 @@ export const createAboutMeBackground = (): TitleBackgroundController => {
       }
     },
     update: ({ camera, titleQuaternion }) => {
-      if (!orientationRoot || !spinRoot) return;
+      if (!groupToBeSpinned) return;
 
-      orientationRoot.quaternion.slerp(titleQuaternion, ABOUT_ME_ROTATION_SMOOTHING);
+      if (camera) {
+        const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+        const currentYaw = e.y;
 
-      if (!camera) return;
+        if (previousCameraYaw === null) {
+          previousCameraYaw = currentYaw;
+        } else {
+          let deltaYaw = currentYaw - previousCameraYaw;
+          while (deltaYaw > Math.PI) deltaYaw -= Math.PI * 2;
+          while (deltaYaw < -Math.PI) deltaYaw += Math.PI * 2;
 
-      const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
-      const currentYaw = e.y;
+          if (Math.abs(deltaYaw) > ABOUT_ME_MIN_ROTATION_DELTA) {
+            groupToBeSpinned.rotateY(deltaYaw * ABOUT_ME_SPIN_MULTIPLIER);
+          }
 
-      if (previousCameraYaw === null) {
-        previousCameraYaw = currentYaw;
-        return;
+          previousCameraYaw = currentYaw;
+        }
       }
-
-      let deltaYaw = currentYaw - previousCameraYaw;
-      while (deltaYaw > Math.PI) deltaYaw -= Math.PI * 2;
-      while (deltaYaw < -Math.PI) deltaYaw += Math.PI * 2;
-
-      if (Math.abs(deltaYaw) > ABOUT_ME_MIN_ROTATION_DELTA) {
-        spinRoot.rotateY(deltaYaw * ABOUT_ME_SPIN_MULTIPLIER);
-      }
-
-      previousCameraYaw = currentYaw;
     },
     dispose: () => {
-      orientationRoot = null;
-      spinRoot = null;
+      groupToBeSpinned = null;
       previousCameraYaw = null;
     },
   };

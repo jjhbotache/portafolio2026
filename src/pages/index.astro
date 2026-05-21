@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { Icon } from 'astro-icon/components'
 
 ---
 <Layout title="Landing">
@@ -7,14 +8,35 @@ import Layout from '../layouts/Layout.astro';
     id="hero-mask"
     class="masked h-full w-full"
   >
-    <div id="content" class="h-full flex items-center justify-center gap-10 bg-linear-to-br from-gray-900 to-gray-950">
-      <img src="me.png" alt="me" class="h-8/12 drop-shadow-secondary/20 drop-shadow-xl " />
-        <h1 class=" max-w-lg text-8xl font-bold bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
-          Welcome to my portfolio 
-        </h1>
+    <div id="content" class="relative flex items-center justify-end gap-10 h-screen bg-linear-to-br from-gray-900 to-gray-950">
+      
+      <img src="me.png" alt="me" class="fixed h-[150vh]  transform left-[25%] -translate-x-1/2 top-[65%] -translate-y-1/2 drop-shadow-secondary/20 drop-shadow-xl " />
+      <h1 class="pr-[12vw] max-w-250 text-8xl font-bold bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
+        Welcome to my portfolio 
+      </h1>
+      
+      <div class=" fixed bottom-[15%] left-[50%] transform -translate-x-1/2 h-40 w-40 flex items-center justify-center ">
+        <Icon name="downArrow" class="w-10 h-10 text-secondary animate-bounce" />
+      </div>  
+    
     </div>
   </div>
-    <div id="three-overlay" aria-hidden="true"></div>
+    <div id="three-overlay" aria-hidden="true">
+      <div id="tutorial-overlay" aria-hidden="true">
+        <div id="tutorial-icon" class="tutorial-icon" aria-hidden="true">
+          <!-- Cursor icon (desktop) -->
+          <Icon name="cursor" id="cursor-icon" class="w-24 h-24 text-secondary" />
+
+          <!-- Tap icon (touch) -->
+          <Icon name="tap" id="tap-icon" class="w-24 h-24 text-secondary" />
+
+        </div>
+      </div>
+    </div>
+    
+    
+     
+    
   <!-- div used for trigger the onComplete event of the animation -->
   <div class="h-px"></div>
   <!-- link used for redirect with transitions -->
@@ -23,6 +45,7 @@ import Layout from '../layouts/Layout.astro';
 
 <style>
   #content{
+    /* padding: 1rem; */
     transform: scale(1.5);
   }
 
@@ -41,6 +64,45 @@ import Layout from '../layouts/Layout.astro';
       width: 100%;
       height: 100%;
       display: block;
+    }
+    /* Tutorial overlay */
+    #tutorial-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 60;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+
+    #tutorial-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    #tutorial-icon {
+      width: 96px;
+      height: 96px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-origin: 50% 50%;
+      color: #8b5cf6; /* tailwind secondary-ish */
+      filter: drop-shadow(0 8px 20px rgba(0,0,0,0.5));
+    }
+
+    /* show cursor by default, show tap on coarse pointers (touch) */
+    #cursor-icon { display: block; }
+    #tap-icon { display: none; }
+
+    @media (pointer: coarse) {
+      #cursor-icon { display: none; }
+      #tap-icon { display: block; }
     }
 </style>
 

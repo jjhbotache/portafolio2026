@@ -14,6 +14,7 @@ export const createExperienceBackground = (): TitleBackgroundController => {
   let loopTimeline: gsap.core.Timeline | null = null;
   let climbTimeline: gsap.core.Timeline | null = null;
   let blinkTimeline: gsap.core.Timeline | null = null;
+  let collectedMaterials: THREE.Material[] = [];
 
   return {
     modelPaths: EXPERIENCE_MODEL_PATHS,
@@ -24,6 +25,7 @@ export const createExperienceBackground = (): TitleBackgroundController => {
       }
 
       const { model, materials } = cloneBackdropModel(sourceModel);
+      collectedMaterials = materials ?? [];
       
       // 1. Centrar la montaña: calculamos su caja delimitadora (bounding box) real 
       // y desplazamos sus hijos para que el origen (0,0,0) sea el centro geométrico.
@@ -38,7 +40,7 @@ export const createExperienceBackground = (): TitleBackgroundController => {
 
       // 2. Luego rota
       
-      model.position.set(0, 25, -50);
+      model.position.set(0, 25, -70);
       model.rotation.set(THREE.MathUtils.degToRad(-90),0, THREE.MathUtils.degToRad(60));
       model.scale.x = model.scale.y = model.scale.z = 1;
 
@@ -59,7 +61,7 @@ export const createExperienceBackground = (): TitleBackgroundController => {
       });
       
       const particleMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(1, 50, 50), 
+        new THREE.SphereGeometry(2, 50, 50), 
         particleMaterial
       );
       const particleLight = new THREE.PointLight(0x00aaff, 5, 2000);
@@ -70,20 +72,21 @@ export const createExperienceBackground = (): TitleBackgroundController => {
       
       // Agregamos la partícula al modelo para que sus rutas dependan de la escala/posición de la montaña
       model.add(particleGroup);
+      
 
       // Puntos iniciales para que la partícula suba (relativos al modelo)
       const pathPoints = [
         new THREE.Vector3(-100, -40, -60),        // Inicio (abajo)
         new THREE.Vector3(-25, -60, -30),     // Avance 1
         new THREE.Vector3(-40, 5, 5),      // Avance 2
-        new THREE.Vector3(-10, -15, 35),     // Avance 3
+        new THREE.Vector3(-7, -20, 35),     // Avance 3
         new THREE.Vector3(-10, 20, 60),     // Avance 4
-        new THREE.Vector3(0, 20, 90),       // Cima
+        new THREE.Vector3(10, 30, 100),       // Cima
+        new THREE.Vector3(10, 30, 100),       // Cima
       ];
 
       particleGroup.position.copy(pathPoints[0]);
 
-      // Animación de subida a través de los 5 puntos (comentado por ahora)
       climbTimeline?.kill();
       climbTimeline = gsap.timeline({ repeat: -1 });
       for (let i = 0; i < pathPoints.length; i++) {
@@ -99,8 +102,10 @@ export const createExperienceBackground = (): TitleBackgroundController => {
       // Animación titilante (brillo/halo)
       blinkTimeline?.kill();
       blinkTimeline = gsap.timeline({ repeat: -1, yoyo: true });
-      blinkTimeline.fromTo(particleMesh.scale, { x: 0.8, y: 0.8, z: 0.8 }, { x: 1.5, y: 1.5, z: 1.5, duration: 0.2 }, 0);
-      blinkTimeline.fromTo(particleLight, { intensity: 0.5 }, { intensity: 1, duration: 0.2 }, 0);
+      const particleScaleMax = 2;
+      const particleBaseScale = 0.2;
+      blinkTimeline.fromTo(particleMesh.scale, { x: particleBaseScale, y: particleBaseScale, z: particleBaseScale }, { x: particleScaleMax, y: particleScaleMax, z: particleScaleMax, duration: 0.2 }, 0);
+      blinkTimeline.fromTo(particleLight, { intensity: 0.2 }, { intensity: 1, duration: 0.2 }, 0);
 
 
       loopTimeline?.kill();
@@ -115,11 +120,27 @@ export const createExperienceBackground = (): TitleBackgroundController => {
       loopTimeline?.resume();
       climbTimeline?.resume();
       blinkTimeline?.resume();
+      if (collectedMaterials && collectedMaterials.length) {
+        collectedMaterials.forEach((m) => {
+          try {
+            (m as any).depthWrite = true;
+            m.needsUpdate = true;
+          } catch (e) {}
+        });
+      }
     },
     onHide: () => {
       loopTimeline?.pause();
       climbTimeline?.pause();
       blinkTimeline?.pause();
+      if (collectedMaterials && collectedMaterials.length) {
+        collectedMaterials.forEach((m) => {
+          try {
+            (m as any).depthWrite = false;
+            m.needsUpdate = true;
+          } catch (e) {}
+        });
+      }
     },
     update: () => {
       // Animation is timeline-driven.
@@ -131,6 +152,7 @@ export const createExperienceBackground = (): TitleBackgroundController => {
       climbTimeline = null;
       blinkTimeline?.kill();
       blinkTimeline = null;
+      collectedMaterials = [];
     },
   };
 };

@@ -170,6 +170,8 @@ export const createContactBackground = (): TitleBackgroundController => {
     onShow: () => {
       previousCameraQuaternion = null;
       startCameraYaw = null;
+      leftHandTl.restart();
+      rightHandTl.restart();
       
       
       

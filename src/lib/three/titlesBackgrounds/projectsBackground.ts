@@ -63,7 +63,7 @@ export const createProjectsBackground = (): TitleBackgroundController => {
       speedTween = gsap.to(speedController, {
         value: SPEED_MAX,
         duration: SPEED_CYCLE_SECONDS,
-        ease: 'sine.inOut',
+        ease: 'expo.inOut',
         repeat: -1,
         yoyo: true,
         paused: true,

@@ -88,6 +88,56 @@ const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | nu
 
 };
 
+function startTutorialIfNeeded(overlay: HTMLElement | null) {
+  if (!overlay) return;
+
+  try {
+    const key = 'landing_tutorial_shown_count';
+    const shownCount = Number(localStorage.getItem(key) ?? 0);
+    if (!isNaN(shownCount) && shownCount >= 2) return;
+
+    const tutorialOverlay = overlay.querySelector('#tutorial-overlay') as HTMLElement | null;
+    const tutorialIcon = overlay.querySelector('#tutorial-icon') as HTMLElement | null;
+    if (!tutorialOverlay || !tutorialIcon) return;
+
+    // mark as shown (increment once per start)
+    const newCount = Math.min(2, (isNaN(shownCount) ? 0 : shownCount) + 1);
+    localStorage.setItem(key, String(newCount));
+
+    // reveal
+    tutorialOverlay.classList.add('visible');
+    gsap.set(tutorialIcon, {y: "-25vh", x: "30vw", scale: 2, opacity: 0, transformOrigin: '50% 50%' });
+
+    const tl = gsap.timeline({ repeat: -1 });
+    
+    tl
+      .to(tutorialIcon, { scale: 1, opacity: 1, duration: 0.6, ease: 'power1.out' })
+      .to(tutorialIcon, { x: '-30vw', duration: 3.0, ease: 'power2.out' })
+      .to(tutorialIcon, { x: 0, scale: 2, opacity: 0, duration: 0 });
+
+    let timeoutId: number | null = window.setTimeout(() => stop(), 10000);
+
+    function stop() {
+      tl.kill();
+      tutorialOverlay?.classList.remove('visible');
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      overlay?.removeEventListener('pointerdown', onPointerDown);
+    }
+
+    function onPointerDown() {
+      stop();
+    }
+
+    overlay.addEventListener('pointerdown', onPointerDown);
+  } catch (e) {
+    // ignore storage errors
+    // console.warn('tutorial init failed', e);
+  }
+}
+
 function SpaceIntroAnimation3D(landingScene: LandingScene) {
   if (!landingScene) {
     return;
@@ -99,6 +149,7 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
     },
     onComplete: () => {
       landingScene.showTitles();
+      startTutorialIfNeeded(landingScene.overlay);
     }
   });
 

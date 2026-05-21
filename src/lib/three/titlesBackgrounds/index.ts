@@ -5,9 +5,10 @@ import { createExperienceBackground } from './experienceBackground';
 import { createProjectsBackground } from './projectsBackground';
 
 export const createTitleBackgroundControllers = (): TitleBackgroundController[] => [
-  createContactBackground(),
-  createAboutMeBackground(),
+  // this order is important, it should match the title sequence in homeLandingTitles.ts
   createExperienceBackground(),
+  createAboutMeBackground(),
+  createContactBackground(),
   createProjectsBackground(),
 ];
 

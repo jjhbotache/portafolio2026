@@ -6,9 +6,10 @@ import { materialFactory } from './materialFactory';
 import { createTitleBackgroundControllers } from './titlesBackgrounds';
 
 const TITLE_SEQUENCE = [
-  '/3d/contacto.stl',
-  '/3d/acerca de mi.stl',
+  // this order is important, it should match the title background controllers sequence in titlesBackgrounds/index.ts
   '/3d/experiencia.stl',
+  '/3d/acerca de mi.stl',
+  '/3d/contacto.stl',
   '/3d/proyectos.stl',
 ] as const;
 
