@@ -9,9 +9,9 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/node": "^9.5.4",
+    "@astrojs/node": "^10.1.2",
     "@tailwindcss/vite": "^4.2.1",
-    "astro": "^5.17.1",
+    "astro": "^6.4.2",
     "astro-icon": "^1.1.5",
     "gsap": "^3.14.2",
     "lil-gui": "^0.21.0",

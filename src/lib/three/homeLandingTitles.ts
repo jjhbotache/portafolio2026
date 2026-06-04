@@ -267,7 +267,26 @@ export const createLandingTitles = (scene: THREE.Scene, camera: THREE.Perspectiv
     activeIndex = nextIndex;
   };
 
+  let isPaused = false;
+  const setPaused = (paused: boolean) => {
+    isPaused = paused;
+  };
+
   const updateFromCamera = (elapsedTime = 0) => {
+    if (isPaused) {
+      if (titlesVisible && activeIndex >= 0) {
+        const activeTitle = titles[activeIndex];
+        if (activeTitle?.loaded) {
+          backgrounds[activeIndex]?.update({
+            elapsedTime,
+            camera,
+            titleQuaternion: activeTitle.group.quaternion,
+          });
+        }
+      }
+      return;
+    }
+
     const clockwiseAngle = getCameraClockwiseAngle();
     const relativeAngle = clockwiseAngle - referenceClockwiseAngle;
     const nextIndex = getNearestTitleIndex(relativeAngle, titles.length);
@@ -352,5 +371,8 @@ export const createLandingTitles = (scene: THREE.Scene, camera: THREE.Perspectiv
     show,
     hide,
     dispose,
+    setPaused,
+    getActiveTitleGroup: () => titles[activeIndex]?.group,
+    getActiveBackdropGroup: () => titles[activeIndex]?.backdropGroup,
   };
 };

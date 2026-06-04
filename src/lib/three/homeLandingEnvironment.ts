@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import gsap from 'gsap';
 import { addPlanarUvs, materialFactory } from './materialFactory';
 
 const PLATFORM_NEON_PART_INDEXES = new Set([1]);
@@ -7,6 +8,9 @@ const FLOOR_NEON_PART_INDEXES = new Set([0]);
 const FLOOR_SCALE = 0.3;
 const FLOOR_Y = -6;
 const FLOOR_ROTATION_X = THREE.MathUtils.degToRad(270);
+
+// Module-level env materials for fading the floor/platform
+let envMaterials: THREE.Material[] = [];
 
 
 
@@ -127,7 +131,11 @@ const loadCompositeStl = (
     components.forEach((componentFaces, partIndex) => {
       const componentGeometry = buildComponentGeometry(componentFaces, positions);
       const materialName = neonIndexes.has(partIndex) ? neonMaterialName : darkMaterialName;
-      const mesh = new THREE.Mesh(componentGeometry, materialFactory(materialName));
+      const mat = materialFactory(materialName) as THREE.Material & { opacity?: number; transparent?: boolean };
+      mat.transparent = true;
+      if (typeof (mat as any).opacity === 'undefined') (mat as any).opacity = 1;
+      const mesh = new THREE.Mesh(componentGeometry, mat);
+      envMaterials.push(mat);
       targetRoot.add(mesh);
     });
   });
@@ -174,14 +182,29 @@ const createFloorGrid = (loader: STLLoader, scene: THREE.Scene) => {
         componentGeometries.forEach((componentGeometry, partIndex) => {
           const isNeonPart = FLOOR_NEON_PART_INDEXES.has(partIndex);
           const materialName = isNeonPart ? 'floorNeon' : 'floorDark';
-          const mesh = new THREE.Mesh(componentGeometry, materialFactory(materialName));
-
+          const mat = materialFactory(materialName) as THREE.Material & { opacity?: number; transparent?: boolean };
+          mat.transparent = true;
+          if (typeof (mat as any).opacity === 'undefined') (mat as any).opacity = 1;
+          const mesh = new THREE.Mesh(componentGeometry, mat);
+          envMaterials.push(mat);
           floorRoot.add(mesh);
         });
       }
     }
-  });
+      });
 };
+
+export const fadeOutFloor = (duration = 0.5) => {
+  if (!envMaterials.length) return null;
+  // dep
+  return gsap.to(envMaterials, { opacity: 0, depthWrite: false,needsUpdate: true, duration, ease: 'power2.inOut' });
+};
+
+export const fadeInFloor = (duration = 0.5) => {
+  if (!envMaterials.length) return null;
+  return gsap.to(envMaterials, { opacity: 1, depthWrite: true,needsUpdate: true, duration, ease: 'power2.inOut' });
+};
+
 
 export const createLandingStarField = () => {
   const starsGeometry = new THREE.BufferGeometry();

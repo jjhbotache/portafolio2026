@@ -164,7 +164,6 @@ export const createContactBackground = (): TitleBackgroundController => {
 
       backdropGroup.clear();
       backdropGroup.add(firstClone.model);
-
       return [...firstClone.materials];
     },
     onShow: () => {

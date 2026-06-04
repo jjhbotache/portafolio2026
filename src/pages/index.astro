@@ -11,7 +11,7 @@ import { Icon } from 'astro-icon/components'
     <div id="content" class="relative flex items-center justify-end gap-10 h-screen bg-linear-to-br from-gray-900 to-gray-950">
       
       <img src="me.png" alt="me" class="fixed h-[150vh]  transform left-[25%] -translate-x-1/2 top-[65%] -translate-y-1/2 drop-shadow-secondary/20 drop-shadow-xl " />
-      <h1 class="pr-[12vw] max-w-250 text-8xl font-bold bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
+      <h1 class=" max-w-222 text-[5.5rem] font-bold bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
         Welcome to my portfolio 
       </h1>
       
@@ -34,8 +34,15 @@ import { Icon } from 'astro-icon/components'
       </div>
     </div>
     
-    
-     
+    <div id="detail-overlay" class="fixed inset-0 z-50 hidden opacity-0 grid-cols-3 grid-rows-3 pointer-events-none">
+      <div class="col-start-1 row-start-1  flex items-center justify-center text-white text-center">
+        <div>
+          <h2 class="text-4xl font-bold mb-4">Lorem Ipsum</h2>
+          <p class="text-lg">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.</p>
+        </div>
+      </div>
+      <div id="modelBg" class="col-start-3 row-start-2  border-2 border-red-950"></div>
+    </div>
     
   <!-- div used for trigger the onComplete event of the animation -->
   <div class="h-px"></div>
@@ -52,7 +59,7 @@ import { Icon } from 'astro-icon/components'
     #three-overlay {
       position: fixed;
       inset: 0;
-      z-index: 50;
+      z-index: 40;
       opacity: 0;
       visibility: hidden;
       transition: opacity 0.4s ease;

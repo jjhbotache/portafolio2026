@@ -36,7 +36,7 @@ export const createExperienceBackground = (): TitleBackgroundController => {
         child.position.sub(center);
       });
       
-      placeBackdropBehindTitle(model, titleSize);
+      // placeBackdropBehindTitle(model, titleSize);
 
       // 2. Luego rota
       
@@ -46,7 +46,6 @@ export const createExperienceBackground = (): TitleBackgroundController => {
 
       
       
-      backdropGroup.clear();
       backdropGroup.add(model);
 
       // === 2. PARTÍCULA AZUL TITILANTE ===
@@ -110,9 +109,11 @@ export const createExperienceBackground = (): TitleBackgroundController => {
 
       loopTimeline?.kill();
       
-      backdropGroup.rotation.set(0,0, 0);
 
       materials.push(particleMaterial);
+      
+      
+      
 
       return materials;
     },

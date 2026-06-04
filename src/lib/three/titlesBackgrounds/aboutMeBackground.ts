@@ -8,7 +8,7 @@ import { cloneBackdropModel, placeBackdropBehindTitle } from './shared';
 import { addPlanarUvs, materialFactory } from '../materialFactory';
 import gsap from 'gsap';
 
-const ABOUT_ME_SPIN_MULTIPLIER = 4;
+const ABOUT_ME_SPIN_MULTIPLIER = .8;
 const ABOUT_ME_MIN_ROTATION_DELTA = 0.0001;
 const ABOUT_ME_MODEL_PATHS = ['/3d/man_thinking.stl'] as const;
 

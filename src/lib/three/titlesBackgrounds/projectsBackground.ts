@@ -86,6 +86,8 @@ export const createProjectsBackground = (): TitleBackgroundController => {
 
       backdropGroup.clear();
       backdropGroup.add(root);
+      
+      
 
       lastTime = 0;
       // connect timer to document (enables Page Visibility handling) y sincronizar
@@ -94,6 +96,7 @@ export const createProjectsBackground = (): TitleBackgroundController => {
       }
       internalTimer.update(performance.now());
 
+      
       return collectedMaterials;
     },
     onShow: () => {

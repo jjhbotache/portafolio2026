@@ -1,7 +1,10 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { createHomeLandingThreeScene, resetCameraToInitialPosition, type LandingScene } from './three/homeLandingThreeScene';
-import { CatmullRomCurve3, MathUtils, Vector3 } from 'three';
+import { CatmullRomCurve3, MathUtils, Vector3, Quaternion, Camera, Group, AxesHelper } from 'three';
+import { fadeOutDisk, fadeInDisk } from './three/homeLandingDisk';
+import { fadeOutFloor, fadeInFloor } from './three/homeLandingEnvironment';
+import * as THREE from 'three';
 
 gsap.registerPlugin(ScrollTrigger);
 const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | null) => {
@@ -200,6 +203,226 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
   
 }
 
+function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement) {
+  let isDetailView = false;
+  const detailOverlay = document.querySelector('#detail-overlay') as HTMLElement;
+  
+  if (!detailOverlay) return;
+
+  // floor and disk fades are handled by their modules
+
+  // the click could come from the detail overlay or from the canvas overlay
+  // Luz direccional para la detail view
+  let detailViewLight: THREE.DirectionalLight | null = null;
+
+  const handleToggle = () => {
+    isDetailView = !isDetailView;
+
+    const activeBackdropGroup = landingScene.titles.getActiveBackdropGroup();
+
+    if (isDetailView) {
+      
+      // Agregar luz direccional en la posición de la cámara
+      detailViewLight = new THREE.DirectionalLight(0x68d9ff, 40);
+      detailViewLight.position.copy(landingScene.camera.position);
+      landingScene.scene.add(detailViewLight);
+      // ENTER DETAIL VIEW
+      // pause the idle orbit behavior using the scene helper
+      landingScene.pauseOrbit();
+      
+      landingScene.controls.enabled = false;
+      landingScene.titles.setPaused(true);
+      landingScene.controls.dampingFactor = 0.002;
+
+      const tl = gsap.timeline();
+
+      // Fade out background environment (use module helpers)
+      const floorTween = fadeOutFloor(0.5);
+      if (floorTween) tl.add(floorTween, 0);
+      const diskTween = fadeOutDisk(0.5);
+      if (diskTween) tl.add(diskTween, 0);
+      // fade out the title
+      const activeTitle = landingScene.titles.getActiveTitleGroup();
+      if (activeTitle) {
+        activeTitle.children.forEach((child) => {
+          if (child instanceof THREE.Mesh) {
+            gsap.to(child.material, { opacity: 0, duration: 0.5, ease: 'sine.inOut' });
+          }
+        });
+      }
+    
+
+      // Move objects to corners using screen->world projection so they align with HTML anchors
+      // Ensure overlay is laid out so anchors can be measured
+      gsap.set(detailOverlay, { display: 'grid', opacity: 0, pointerEvents: 'none' });
+
+      const modelAnchor = document.querySelector('#modelBg') as HTMLElement ;
+
+      
+
+      
+      
+      const proximityFactor = .8;
+
+      // Helper to move and orient a group to a screen anchor and face the camera
+      /**
+       * Move and orient a group to a screen anchor and face the camera, with optional custom move/rotate and debug helpers.
+       * @param {Group} group - The group to move/orient
+       * @param {HTMLElement} anchorEl - The HTML anchor element
+       * @param {Object} [opts]
+       *   @param {Object} [opts.move] - {x, y, z} offset to add to the final position
+       *   @param {Object} [opts.rotate] - {x, y, z} Euler angles (radians) to apply after facing camera
+       *   @param {Object} [opts.scale] - Scale factor for the group
+       *   @param {Group} [opts.model] - Optionally, a different group to move/rotate (default: group)
+       *   @param {boolean} [opts.debug] - If true, add debug sphere/axes
+       *  
+       */
+      const moveAndOrientGroup = (
+        group: Group,
+        anchorEl: HTMLElement,
+        opts?: {
+          move?: { x?: number; y?: number; z?: number };
+          rotate?: { x?: number; y?: number; z?: number };
+          scale?: number;
+          model?: Group;
+          debug?: boolean;
+        }
+      ) => {
+        if (!group || !anchorEl) return;
+        const { move, rotate,scale, model, debug } = opts || {};
+        const targetGroup = model || group;
+
+        // DEBUG: agregar punto y axes helper al centro del grupo solo si debug
+        if (debug) {
+          const debugSphereGeometry = new THREE.SphereGeometry(10, 16, 16);
+          const debugSphereMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+          const debugSphere = new THREE.Mesh(debugSphereGeometry, debugSphereMaterial);
+          debugSphere.name = 'DEBUG_CENTER_SPHERE';
+          targetGroup.add(debugSphere);
+          const axesHelper = new THREE.AxesHelper(100);
+          axesHelper.name = 'DEBUG_AXES_HELPER';
+          targetGroup.add(axesHelper);
+        }
+
+        const worldPos = new Vector3();
+        targetGroup.getWorldPosition(worldPos);
+        const distance = landingScene.camera.position.distanceTo(worldPos);
+        const screen = getAnchorCenter(anchorEl);
+        const worldTarget = screenToWorldAtDistance(screen.x, screen.y, landingScene.camera, distance * proximityFactor);
+        let localTarget = targetGroup.parent ? targetGroup.parent.worldToLocal(worldTarget.clone()) : worldTarget.clone();
+        
+        //  face the group to the camera by calculating the lookAt rotation first
+        // save the first rotation to comeback later 
+        const firstRotation = targetGroup.rotation.clone();
+        // rotate the group to face the camera
+        targetGroup.lookAt(landingScene.camera.position);
+        
+        let rotationX = targetGroup.rotation.x;
+        let rotationY = targetGroup.rotation.y;
+        let rotationZ = targetGroup.rotation.z;
+        
+        // apply the first rotation
+        targetGroup.rotation.copy(firstRotation);
+        
+        let groupScale = opts?.scale || 1;
+        // Apply move offset if provided        
+        if (move) {
+          localTarget.x += move.x ?? 0;
+          localTarget.y += move.y ?? 0;
+          localTarget.z += move.z ?? 0;
+        }
+        if (rotate) {
+          rotationX += (opts?.rotate?.x || 0);
+          rotationY += (opts?.rotate?.y || 0);
+          rotationZ += (opts?.rotate?.z || 0);
+        }
+        if (scale) {
+          groupScale = opts?.scale || 1 ;
+        }
+        
+        // if in the especific group, override the rotation and position
+        if (group.id === 24) { // mountain
+          // do nothing
+        }
+        if (group.id === 30) { // cube gear
+          // do nothing
+        }
+        if (group.id === 28) { // hands
+          // do nothing
+        }
+        if (group.id === 26) { // thinking man
+          localTarget.y -= 20;
+          localTarget.x += 30;
+        }
+        
+        
+        
+        
+        
+        
+        tl.to(targetGroup.rotation, { x: rotationX || 0, y: rotationY || 0, z: rotationZ || 0,  duration: 0.8, ease: 'power3.inOut',}, 0); 
+        tl.to(targetGroup.position, { x: localTarget.x, y: localTarget.y, z: localTarget.z, duration: 0.8, ease: 'power3.inOut' }, 0);
+        tl.to(targetGroup.scale, { x: groupScale, y: groupScale, z: groupScale, duration: 0.8, ease: 'power3.inOut' }, 0);
+        
+      };
+
+      // Dynamically move and orient both groups
+      moveAndOrientGroup(activeBackdropGroup, modelAnchor,{
+        move:{x: -50},
+        rotate:{y: MathUtils.degToRad(-45),x: MathUtils.degToRad(2)}
+      }); // move backdrop to model anchor with some offset
+
+      // Show HTML layout
+      tl.to(detailOverlay, { opacity: 1, display: 'grid', pointerEvents: 'auto', duration: 0.5 }, 0.3);
+
+    } else {
+      
+      
+      // Quitar la luz direccional si existe
+      if (detailViewLight) {
+        landingScene.scene.remove(detailViewLight);
+        detailViewLight.dispose && detailViewLight.dispose();
+        detailViewLight = null;
+      }
+      // EXIT DETAIL VIEW
+      const tl = gsap.timeline({
+        onComplete: () => {
+          landingScene.controls.enabled = true;
+          landingScene.controls.autoRotate = true;
+          landingScene.titles.setPaused(false);
+          landingScene.controls.dampingFactor = 0.06;
+          landingScene.titles.show();
+        }
+      });
+      const activeTitle = landingScene.titles.getActiveTitleGroup();
+      if (activeTitle) {
+        activeTitle.children.forEach((child) => {
+          if (child instanceof THREE.Mesh) {
+            gsap.to(child.material, { opacity: 1, duration: 0.5, ease: 'sine.inOut' });
+          }
+        });
+      }
+      
+      tl.to(detailOverlay, { opacity: 0, display: 'none', pointerEvents: 'none', duration: 0.3 }, 0);
+
+      const floorInTween = fadeInFloor(0.5);
+      if (floorInTween) tl.add(floorInTween, 0.2);
+      const diskInTween = fadeInDisk(0.5);
+      if (diskInTween) tl.add(diskInTween, 0.2);
+
+      if (activeBackdropGroup) {
+        tl.to(activeBackdropGroup.position, { x: 0, y: 0, z: 0, duration: 0.8, ease: 'power3.inOut' }, 0.1);
+        tl.to(activeBackdropGroup.quaternion, { x: 0, y: 0, z: 0, w: 1, duration: 0.8, ease: 'power3.inOut' }, 0.1); // RESTAURAR QUATERNION
+        tl.to(activeBackdropGroup.scale, { x: 1, y: 1, z: 1, duration: 0.8, ease: 'power3.inOut' }, 0.1);
+            
+      }
+    }
+  };
+
+  overlay.addEventListener('click', handleToggle);
+  detailOverlay.addEventListener('click', handleToggle);
+}
+
 export const initializeHomeLandingScene = () => {
   window.scrollTo(0, 0);
 
@@ -213,4 +436,29 @@ export const initializeHomeLandingScene = () => {
   }
 
   buildLandingTimeline(heroMask, landingScene);
+
+  if (overlay && landingScene) {
+    setupDetailViewToggle(landingScene, overlay);
+  }
+};
+
+
+
+
+
+
+
+
+// --------------
+const getAnchorCenter = (el: HTMLElement) => {
+    // the el is needed to properly position the titles, but in case it can't be found we fallback to some percentage-based screen positions
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  };
+  
+const screenToWorldAtDistance = (clientX: number, clientY: number, camera: Camera, distance: number) => {
+  const ndc = new Vector3((clientX / window.innerWidth) * 2 - 1, - (clientY / window.innerHeight) * 2 + 1, 0.5);
+  ndc.unproject(camera);
+  const dir = ndc.sub(camera.position).normalize();
+  return camera.position.clone().add(dir.multiplyScalar(distance));
 };

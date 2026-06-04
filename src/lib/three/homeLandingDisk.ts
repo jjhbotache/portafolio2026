@@ -5,6 +5,10 @@ import { addPlanarUvs, materialFactory } from './materialFactory';
 
 const NEON_PART_INDEXES = new Set([0, 3]);
 
+// Module-level references so we can fade the disk materials later
+let diskMaterials: THREE.Material[] = [];
+let diskRootRef: THREE.Group | null = null;
+
 const splitGeometryIntoComponents = (geometry: THREE.BufferGeometry) => {
   geometry.computeVertexNormals();
 
@@ -131,9 +135,8 @@ const applyDiskWobbleAnimation = (diskGroup: THREE.Mesh) => {
 };
 
 export const loadLandingDisk = (diskRoot: THREE.Group) => {
+  diskRootRef = diskRoot;
   const stlLoader = new STLLoader();
-
-  
 
   stlLoader.load('/3d/disk.stl', (geometry) => {
     const { components, positions } = splitGeometryIntoComponents(geometry);
@@ -142,11 +145,25 @@ export const loadLandingDisk = (diskRoot: THREE.Group) => {
       const componentGeometry = buildComponentGeometry(componentFaces, positions);
       const materialName = NEON_PART_INDEXES.has(partIndex) ? 'diskNeon' : 'diskDark';
       addPlanarUvs(componentGeometry);
-      const mesh = new THREE.Mesh(componentGeometry, materialFactory(materialName));
+
+      const mat = materialFactory(materialName) as THREE.Material & { opacity?: number; transparent?: boolean };
+      mat.transparent = true;
+      if (typeof (mat as any).opacity === 'undefined') (mat as any).opacity = 1;
+
+      const mesh = new THREE.Mesh(componentGeometry, mat);
+      diskMaterials.push(mat);
       applyDiskWobbleAnimation(mesh);
       diskRoot.add(mesh);
     });
   });
-  
-  
+};
+
+export const fadeOutDisk = (duration = 0.5) => {
+  if (!diskMaterials.length) return null;
+  return gsap.to(diskMaterials, { opacity: 0, depthWrite: false,needsUpdate: true, duration, ease: 'power2.inOut' });
+};
+
+export const fadeInDisk = (duration = 0.5) => {
+  if (!diskMaterials.length) return null;
+  return gsap.to(diskMaterials, { opacity: 1, depthWrite: true,needsUpdate: true, duration, ease: 'power2.inOut' });
 };
