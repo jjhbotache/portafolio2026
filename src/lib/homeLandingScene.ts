@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { createHomeLandingThreeScene, resetCameraToInitialPosition, type LandingScene } from './three/homeLandingThreeScene';
-import { CatmullRomCurve3, MathUtils, Vector3, Quaternion, Camera, Group, AxesHelper } from 'three';
+import { CatmullRomCurve3, MathUtils, Vector3, Camera, Group } from 'three';
 import { fadeOutDisk, fadeInDisk } from './three/homeLandingDisk';
 import { fadeOutFloor, fadeInFloor } from './three/homeLandingEnvironment';
 import * as THREE from 'three';
@@ -206,6 +206,7 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
 function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement) {
   let isDetailView = false;
   const detailOverlay = document.querySelector('#detail-overlay') as HTMLElement;
+  let firstThinkingManRotationY: number = 0;
   
   if (!detailOverlay) return;
 
@@ -215,10 +216,39 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
   // Luz direccional para la detail view
   let detailViewLight: THREE.DirectionalLight | null = null;
 
-  const handleToggle = () => {
-    isDetailView = !isDetailView;
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
 
-    const activeBackdropGroup = landingScene.titles.getActiveBackdropGroup();
+  const updateMouseCoords = (event: MouseEvent) => {
+    const rect = overlay.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  };
+
+  overlay.addEventListener('mousemove', (event) => {
+    if (isDetailView) return;
+    updateMouseCoords(event);
+
+    raycaster.setFromCamera(mouse, landingScene.camera);
+    const objsToBeIntersected = [
+      ...raycaster.intersectObject(landingScene.titles.getActiveTitleGroup()!, true),
+      ...raycaster.intersectObject(landingScene.titles.getActiveBackdropGroup()!, true)
+    ] ;
+
+    if (objsToBeIntersected.length > 0) {
+      overlay.style.cursor = 'pointer';
+    } else {
+      overlay.style.cursor = 'default';
+    }
+  });
+
+  const handleToggle = (action: "open" | "close") => {
+    isDetailView = action === "open";
+    overlay.style.cursor = 'default';
+    
+    
+
+    const activeBackdropGroup  = landingScene.titles.getActiveBackdropGroup();
 
     if (isDetailView) {
       
@@ -237,16 +267,16 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       const tl = gsap.timeline();
 
       // Fade out background environment (use module helpers)
-      const floorTween = fadeOutFloor(0.5);
+      const floorTween = fadeOutFloor(0.3);
       if (floorTween) tl.add(floorTween, 0);
-      const diskTween = fadeOutDisk(0.5);
+      const diskTween = fadeOutDisk(0.3);
       if (diskTween) tl.add(diskTween, 0);
       // fade out the title
       const activeTitle = landingScene.titles.getActiveTitleGroup();
       if (activeTitle) {
         activeTitle.children.forEach((child) => {
           if (child instanceof THREE.Mesh) {
-            gsap.to(child.material, { opacity: 0, duration: 0.5, ease: 'sine.inOut' });
+            gsap.to(child.material, { opacity: 0, duration: 0.3, ease: 'sine.inOut' });
           }
         });
       }
@@ -341,6 +371,8 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
         }
         
         // if in the especific group, override the rotation and position
+        // console.log("group id", group.id);
+        
         if (group.id === 24) { // mountain
           // do nothing
         }
@@ -350,9 +382,13 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
         if (group.id === 28) { // hands
           // do nothing
         }
-        if (group.id === 26) { // thinking man
+        if (group.id === 21) { // thinking man
+          firstThinkingManRotationY = targetGroup.children[0].rotation.y;
+          
           localTarget.y -= 20;
-          localTarget.x += 30;
+          localTarget.x -= 20;
+          gsap.to(targetGroup.children[0].rotation, { y: MathUtils.degToRad(-45), duration: 0.5, ease: 'power3.inOut',delay: 0.3 });
+          
         }
         
         
@@ -360,20 +396,20 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
         
         
         
-        tl.to(targetGroup.rotation, { x: rotationX || 0, y: rotationY || 0, z: rotationZ || 0,  duration: 0.8, ease: 'power3.inOut',}, 0); 
-        tl.to(targetGroup.position, { x: localTarget.x, y: localTarget.y, z: localTarget.z, duration: 0.8, ease: 'power3.inOut' }, 0);
-        tl.to(targetGroup.scale, { x: groupScale, y: groupScale, z: groupScale, duration: 0.8, ease: 'power3.inOut' }, 0);
+        tl.to(targetGroup.rotation, { x: rotationX || 0, y: rotationY || 0, z: rotationZ || 0,  duration: 0.5, ease: 'power3.inOut',}, ">+=.1"); 
+        tl.to(targetGroup.position, { x: localTarget.x, y: localTarget.y, z: localTarget.z, duration: 0.5, ease: 'power3.inOut' }, "<");
+        tl.to(targetGroup.scale, { x: groupScale, y: groupScale, z: groupScale, duration: 0.5, ease: 'power3.inOut' }, "<");
         
       };
 
       // Dynamically move and orient both groups
       moveAndOrientGroup(activeBackdropGroup, modelAnchor,{
         move:{x: -50},
-        rotate:{y: MathUtils.degToRad(-45),x: MathUtils.degToRad(2)}
+        rotate:{y: MathUtils.degToRad(-45),x: MathUtils.degToRad(-7)}
       }); // move backdrop to model anchor with some offset
 
       // Show HTML layout
-      tl.to(detailOverlay, { opacity: 1, display: 'grid', pointerEvents: 'auto', duration: 0.5 }, 0.3);
+      tl.to(detailOverlay, { opacity: 1, display: 'grid', pointerEvents: 'auto', duration: 0.5 }, "<");
 
     } else {
       
@@ -391,36 +427,65 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
           landingScene.controls.autoRotate = true;
           landingScene.titles.setPaused(false);
           landingScene.controls.dampingFactor = 0.06;
-          landingScene.titles.show();
         }
       });
-      const activeTitle = landingScene.titles.getActiveTitleGroup();
-      if (activeTitle) {
-        activeTitle.children.forEach((child) => {
-          if (child instanceof THREE.Mesh) {
-            gsap.to(child.material, { opacity: 1, duration: 0.5, ease: 'sine.inOut' });
-          }
-        });
-      }
       
       tl.to(detailOverlay, { opacity: 0, display: 'none', pointerEvents: 'none', duration: 0.3 }, 0);
 
-      const floorInTween = fadeInFloor(0.5);
+      const floorInTween = fadeInFloor(0.3);
       if (floorInTween) tl.add(floorInTween, 0.2);
-      const diskInTween = fadeInDisk(0.5);
+      const diskInTween = fadeInDisk(0.3);
       if (diskInTween) tl.add(diskInTween, 0.2);
 
       if (activeBackdropGroup) {
         tl.to(activeBackdropGroup.position, { x: 0, y: 0, z: 0, duration: 0.8, ease: 'power3.inOut' }, 0.1);
         tl.to(activeBackdropGroup.quaternion, { x: 0, y: 0, z: 0, w: 1, duration: 0.8, ease: 'power3.inOut' }, 0.1); // RESTAURAR QUATERNION
         tl.to(activeBackdropGroup.scale, { x: 1, y: 1, z: 1, duration: 0.8, ease: 'power3.inOut' }, 0.1);
+        
+        // si el grupo tiene un mesh específico para el título, también restaurar su rotación y posición
+        if (activeBackdropGroup.id === 24) { // mountain
+          // do nothing
+        }
+        if (activeBackdropGroup.id === 30) { // cube gear
+          // do nothing
+        }
+        if (activeBackdropGroup.id === 28) { // hands
+          // do nothing
+        }
+        if (activeBackdropGroup.id === 21) { // thinking
+          tl.to(activeBackdropGroup.children[0].rotation, { y: firstThinkingManRotationY, duration: 0.5, ease: 'power3.inOut' }, 0.1);
+          
+        }
             
       }
+      const activeTitle = landingScene.titles.getActiveTitleGroup();
+      if (activeTitle) {
+        activeTitle.children.forEach((child) => {
+          if (child instanceof THREE.Mesh) {
+            // a little bit after the before animation
+            tl.to(child.material, { opacity: 1, duration: .2, ease: 'sine.inOut' },">");
+          }
+        });
+      }
+      
     }
   };
 
-  overlay.addEventListener('click', handleToggle);
-  detailOverlay.addEventListener('click', handleToggle);
+  const handleOverlayClick = (event: MouseEvent) => {
+    if (isDetailView) {
+      handleToggle("close"); // Click fuera en vista detalle cierra la vista
+      return;
+    }
+
+    raycaster.setFromCamera(mouse, landingScene.camera);
+    if (raycaster.intersectObject(landingScene.titles.getActiveBackdropGroup()!).length > 0
+    || raycaster.intersectObject(landingScene.titles.getActiveTitleGroup()!).length > 0) {
+      handleToggle("open");
+    }
+  };
+
+  overlay.addEventListener('click', handleOverlayClick);
+  detailOverlay.addEventListener('click', () => handleToggle("close"));
 }
 
 export const initializeHomeLandingScene = () => {

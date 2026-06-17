@@ -31,6 +31,7 @@ type LandingTitle = {
   materials: THREE.Material[];
   size: THREE.Vector3;
   loaded: boolean;
+  mesh?: THREE.Mesh;
 };
 
 const setTitleOpacity = (title: LandingTitle, opacity: number) => {
@@ -75,6 +76,7 @@ const loadTitleModel = (
       material.depthWrite = false;
 
       const mesh = new THREE.Mesh(geometry, material);
+      title.mesh = mesh;
       titleGroup.add(mesh);
       title.materials.push(material);
       title.loaded = true;
