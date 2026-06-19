@@ -3,9 +3,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { loadLandingDisk } from './homeLandingDisk';
-import { createLandingStarField, loadLandingEnvironment } from './homeLandingEnvironment';
+import { loadLandingDisk, disposeLandingDisk } from './homeLandingDisk';
+import { createLandingStarField, loadLandingEnvironment, disposeLandingEnvironment } from './homeLandingEnvironment';
 import { createLandingTitles } from './homeLandingTitles';
+import { configureMaterialAnisotropy, disposeAllTextures } from './materialFactory';
 import type { TitleBackgroundController } from './titlesBackgrounds/types';
 
 export type LandingScene = {
@@ -16,8 +17,9 @@ export type LandingScene = {
   scene: THREE.Scene;
   showTitles: () => void;
   hideTitles: () => void;
-  titles: ReturnType<typeof createLandingTitles>; // We'll update the type of titles from homeLandingTitles.ts
+  titles: ReturnType<typeof createLandingTitles>;
   pauseOrbit: () => void;
+  dispose: () => void;
 };
 
 export function resetCameraToInitialPosition(camera: THREE.PerspectiveCamera) {
@@ -28,6 +30,11 @@ export function resetCameraToInitialPosition(camera: THREE.PerspectiveCamera) {
   camera.zoom = 5;
   camera.updateProjectionMatrix();
 }
+
+const prefersReducedMotion = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+};
 
 const addLights = (scene: THREE.Scene, helpers = false) => {
   const keyLight = new THREE.PointLight(0x59a5ff, 80, 30);
@@ -62,7 +69,7 @@ const setupIdleCameraOrbit = (controls: OrbitControls) => {
   const idleDelayMs = 5000;
   let resumeOrbitTimeoutId: number | null = null;
 
-  controls.autoRotate = true;
+  controls.autoRotate = !prefersReducedMotion();
   controls.autoRotateSpeed = -.2;
 
   const clearResumeTimeout = () => {
@@ -79,6 +86,9 @@ const setupIdleCameraOrbit = (controls: OrbitControls) => {
 
   const scheduleOrbitResume = () => {
     clearResumeTimeout();
+    if (prefersReducedMotion()) {
+      return;
+    }
     resumeOrbitTimeoutId = window.setTimeout(() => {
       controls.autoRotate = true;
       resumeOrbitTimeoutId = null;
@@ -87,7 +97,6 @@ const setupIdleCameraOrbit = (controls: OrbitControls) => {
 
   controls.addEventListener('start', pauseOrbit);
   controls.addEventListener('end', scheduleOrbitResume);
-  // return the pause function so callers can programmatically pause the idle orbit
   return pauseOrbit;
 };
 
@@ -100,43 +109,92 @@ const setupResize = (
   const onResize = () => {
     const width = window.innerWidth;
     const height = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio, 2);
 
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
+    renderer.setPixelRatio(dpr);
     renderer.setSize(width, height);
+    composer.setPixelRatio(dpr);
     composer.setSize(width, height);
     bloomPass.setSize(width, height);
   };
 
   window.addEventListener('resize', onResize);
+  return onResize;
 };
 
+// Adaptive frame throttling: start at 20 FPS floor, raise to 60 FPS if the
+// device has headroom (frame budget is well under the per-frame target).
+const TARGET_FPS_FLOOR = 20;
+const TARGET_FPS_CEILING = 60;
+const HEADROOM_FACTOR = 0.6;
+const FRAME_BUDGET_FOR_FLOOR = 1000 / TARGET_FPS_FLOOR;
+let adaptiveTargetFps = TARGET_FPS_FLOOR;
 let lastFrameTime = 0;
-const targetFPS = 20; // Cambia a 24, 20, etc. según lo que quieras
-const frameDuration = 1000 / targetFPS;
+let lastMeasuredFrameMs = FRAME_BUDGET_FOR_FLOOR;
+let consecutiveFastFrames = 0;
+
+const getFrameDuration = () => 1000 / adaptiveTargetFps;
 
 const startRenderLoop = (
   controls: OrbitControls,
   composer: EffectComposer,
+  onResizeRef: { current: (() => void) | null },
   animate?: (elapsedTime: number) => void,
 ) => {
+  // Connect timer to document so it pauses when the tab is hidden.
   const clock = new THREE.Timer();
+  clock.connect(document);
 
-  
-  
-  // reduce FPS
-  function tick() {
+  let isVisible = !document.hidden;
+
+  const handleVisibilityChange = () => {
+    isVisible = !document.hidden;
+  };
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  const tick = () => {
+    if (!isVisible) {
+      requestAnimationFrame(tick);
+      return;
+    }
+
     const now = performance.now();
+    const frameDuration = getFrameDuration();
     if (now - lastFrameTime >= frameDuration) {
+      const measuredFrameMs = lastFrameTime > 0 ? now - lastFrameTime : frameDuration;
+      lastMeasuredFrameMs = measuredFrameMs;
+
+      // Bump target FPS up when frames are consistently faster than the floor budget.
+      if (measuredFrameMs < FRAME_BUDGET_FOR_FLOOR * HEADROOM_FACTOR) {
+        consecutiveFastFrames += 1;
+        if (consecutiveFastFrames >= 30 && adaptiveTargetFps < TARGET_FPS_CEILING) {
+          adaptiveTargetFps = Math.min(TARGET_FPS_CEILING, adaptiveTargetFps + 5);
+          consecutiveFastFrames = 0;
+        }
+      } else {
+        consecutiveFastFrames = 0;
+      }
+
       lastFrameTime = now;
       const elapsedTime = clock.getElapsed();
       animate?.(elapsedTime);
-      controls.update();
+
+      // Only call controls.update when damping/autoRotate are active to skip
+      // unnecessary work in static views.
+      if (controls.enableDamping || controls.autoRotate) {
+        controls.update();
+      }
       composer.render();
     }
     requestAnimationFrame(tick);
-  }
-tick();
+  };
+  tick();
+
+  return {
+    handleVisibilityChange,
+  };
 };
 
 const createGradientBackground = () => {
@@ -163,23 +221,19 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
   }
 
   const scene = new THREE.Scene();
-  scene.background = createGradientBackground();
-  
-  // create an sphere and apply some material
-  // const sphereGeometry = new THREE.SphereGeometry(5, 32, 32);
-  // const sphereMesh = new THREE.Mesh(sphereGeometry, materialFactory('floorDark'));
-  // scene.add(sphereMesh);
-
-  // add the axis helper to the scene
-  // const axesHelper = new THREE.AxesHelper(5);
-  // scene.add(axesHelper);
+  const backgroundTexture = createGradientBackground();
+  if (backgroundTexture) {
+    scene.background = backgroundTexture;
+  }
 
   const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
   resetCameraToInitialPosition(camera);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  // alpha: false because the background is opaque, saving a composite per frame.
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
+  configureMaterialAnisotropy(renderer);
   overlay.appendChild(renderer.domElement);
 
   const composer = new EffectComposer(renderer);
@@ -189,7 +243,7 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
     new THREE.Vector2(window.innerWidth, window.innerHeight),
     0.015,
     0.1,
-    .4,
+    0.4,
   );
   composer.addPass(bloomPass);
 
@@ -202,35 +256,67 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
   controls.enableZoom = false;
   controls.target.set(0, 0, 0);
   const pauseOrbit = setupIdleCameraOrbit(controls);
-  // controls.enablePan = false;
-  // controls.enableZoom = false;
 
   const diskRoot = new THREE.Group();
   diskRoot.scale.set(0.03, 0.03, 0.03);
-  // rotate the disk to be horizontal
   diskRoot.rotation.set(THREE.MathUtils.degToRad(90), 0, 0);
   scene.add(diskRoot);
 
   loadLandingDisk(diskRoot);
   loadLandingEnvironment(scene);
 
-  const { starField, animate } = createLandingStarField();
+  const { starField, animate, dispose: disposeStarField } = createLandingStarField();
   scene.add(starField);
 
   const titles = createLandingTitles(scene, camera);
 
   addLights(scene);
-  setupResize(camera, renderer, composer, bloomPass);
-  startRenderLoop(controls, composer, (elapsedTime) => {
+  const onResizeRef: { current: (() => void) | null } = { current: null };
+  onResizeRef.current = setupResize(camera, renderer, composer, bloomPass);
+
+  const { handleVisibilityChange } = startRenderLoop(controls, composer, onResizeRef, (elapsedTime) => {
     animate(elapsedTime);
     titles.updateFromCamera(elapsedTime);
   });
 
-  const onPageHide = () => {
-    titles.dispose();
+  // Dispose all GPU/CPU resources owned by the landing scene.
+  // Triggered on pagehide and exposed via the returned `dispose` method for
+  // client-side navigation scenarios.
+  const cleanupFns: Array<() => void> = [
+    () => titles.dispose(),
+    () => disposeLandingDisk(),
+    () => disposeLandingEnvironment(),
+    () => disposeStarField(),
+    () => controls.dispose(),
+    () => composer.dispose(),
+    () => bloomPass.dispose(),
+    () => renderer.dispose(),
+    () => backgroundTexture?.dispose(),
+    () => disposeAllTextures(),
+  ];
+
+  let disposed = false;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    cleanupFns.forEach((fn) => {
+      try {
+        fn();
+      } catch (err) {
+        console.warn('Landing scene cleanup error:', err);
+      }
+    });
+    if (onResizeRef.current) {
+      window.removeEventListener('resize', onResizeRef.current);
+      onResizeRef.current = null;
+    }
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    if (renderer.domElement.parentElement) {
+      renderer.domElement.parentElement.removeChild(renderer.domElement);
+    }
   };
 
-  window.addEventListener('pagehide', onPageHide, { once: true });
+  window.addEventListener('pagehide', dispose, { once: true });
 
   return {
     overlay,
@@ -242,5 +328,7 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
     showTitles: titles.show,
     hideTitles: titles.hide,
     pauseOrbit,
+    dispose,
   };
 };
+

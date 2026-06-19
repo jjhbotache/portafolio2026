@@ -8,6 +8,7 @@ const NEON_PART_INDEXES = new Set([0, 3]);
 // Module-level references so we can fade the disk materials later
 let diskMaterials: THREE.Material[] = [];
 let diskRootRef: THREE.Group | null = null;
+let diskWobbleTween: gsap.core.Tween | null = null;
 
 const splitGeometryIntoComponents = (geometry: THREE.BufferGeometry) => {
   geometry.computeVertexNormals();
@@ -111,6 +112,13 @@ const buildComponentGeometry = (componentFaces: number[], positions: Float32Arra
 };
 
 const applyDiskWobbleAnimation = (diskGroup: THREE.Mesh) => {
+  // Respect prefers-reduced-motion: skip the continuous wobble.
+  if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    diskGroup.rotation.x = THREE.MathUtils.degToRad(5);
+    diskGroup.rotation.y = 0;
+    return;
+  }
+
   const diskRotation = THREE.MathUtils.degToRad(5);
   const totalPoints = 20;
   const keyframes: Array<{ x: number; y: number }> = [];
@@ -126,7 +134,7 @@ const applyDiskWobbleAnimation = (diskGroup: THREE.Mesh) => {
   diskGroup.rotation.x = diskRotation;
   diskGroup.rotation.y = 0;
 
-  gsap.to(diskGroup.rotation, {
+  diskWobbleTween = gsap.to(diskGroup.rotation, {
     keyframes,
     duration: 6,
     ease: 'none',
@@ -166,4 +174,18 @@ export const fadeOutDisk = (duration = 0.5) => {
 export const fadeInDisk = (duration = 0.5) => {
   if (!diskMaterials.length) return null;
   return gsap.to(diskMaterials, { opacity: 1, depthWrite: true,needsUpdate: true, duration, ease: 'power2.inOut' });
+};
+
+export const disposeLandingDisk = () => {
+  diskWobbleTween?.kill();
+  diskWobbleTween = null;
+  if (diskRootRef) {
+    diskRootRef.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+      }
+    });
+  }
+  diskMaterials = [];
+  diskRootRef = null;
 };

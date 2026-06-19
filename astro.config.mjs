@@ -12,6 +12,15 @@ export default defineConfig({
     mode: 'standalone'
   }),
 
+  // Prefetch internal links as soon as they enter the viewport so client-side
+  // navigation feels instant without preloading everything upfront.
+  prefetch: {
+    defaultStrategy: 'viewport',
+    prefetchAll: false,
+  },
+
+  compressHTML: true,
+
   vite: {
     plugins: [tailwindcss()]
   },

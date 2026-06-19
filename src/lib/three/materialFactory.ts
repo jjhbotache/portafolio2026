@@ -8,20 +8,16 @@ const textures = {
     metalnessMap: textureLoader.load('/3d/textures/metal/Metal029_1K-JPG_Metalness.jpg'),
     normalMap: textureLoader.load('/3d/textures/metal/Metal029_1K-JPG_NormalGL.jpg'),
     roughnessMap: textureLoader.load('/3d/textures/metal/Metal029_1K-JPG_Roughness.jpg'),
-  },
-  rocks: {
-    map: textureLoader.load('/3d/textures/rocks/Rocks014_1K-JPG_Color.jpg'),
-    displacementMap: textureLoader.load('/3d/textures/rocks/Rocks014_1K-JPG_Displacement.jpg'),
-    normalMap: textureLoader.load('/3d/textures/rocks/Rocks014_1K-JPG_NormalGL.jpg'),
-    roughnessMap: textureLoader.load('/3d/textures/rocks/Rocks014_1K-JPG_Roughness.jpg'),
-  },
-  matteMetal: {
-    map: textureLoader.load('/3d/textures/matte_metal/Metal046B_1K-JPG_Color.jpg'),
-    displacementMap: textureLoader.load('/3d/textures/matte_metal/Metal046B_1K-JPG_Displacement.jpg'),
-    metalnessMap: textureLoader.load('/3d/textures/matte_metal/Metal046B_1K-JPG_Metalness.jpg'),
-    normalMap: textureLoader.load('/3d/textures/matte_metal/Metal046B_1K-JPG_NormalGL.jpg'),
-    roughnessMap: textureLoader.load('/3d/textures/matte_metal/Metal046B_1K-JPG_Roughness.jpg'),
-  },
+  }
+};
+
+textures.metal.map.colorSpace = THREE.SRGBColorSpace;
+
+let maxAnisotropy = 1;
+export const configureMaterialAnisotropy = (renderer: THREE.WebGLRenderer) => {
+  maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+  textures.metal.map.anisotropy = maxAnisotropy;
+  textures.metal.normalMap.anisotropy = maxAnisotropy;
 };
 
 export const addPlanarUvs = (geometry: THREE.BufferGeometry) => {
@@ -62,10 +58,6 @@ export const addPlanarUvs = (geometry: THREE.BufferGeometry) => {
 
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvArray, 2));
 };
-
-textures.metal.map.colorSpace = THREE.SRGBColorSpace;
-textures.rocks.map.colorSpace = THREE.SRGBColorSpace;
-textures.matteMetal.map.colorSpace = THREE.SRGBColorSpace;
 
 
 
@@ -139,11 +131,28 @@ const getBaseMaterialParams = (materialName: MaterialName): THREE.MeshStandardMa
 };
 
 export const clearLandingMaterialCache = () => {
-  // No-op: materials are no longer cached.
+  materialCache.forEach((material) => material.dispose());
+  materialCache.clear();
 };
 
+// Cached materials: one MeshStandardMaterial per name.
+// Reusing the same material across meshes enables GPU batching and reduces memory.
+const materialCache = new Map<MaterialName, THREE.MeshStandardMaterial>();
+
 export const materialFactory = (materialName: MaterialName): THREE.MeshStandardMaterial => {
-  return new THREE.MeshStandardMaterial(getBaseMaterialParams(materialName));
+  const cached = materialCache.get(materialName);
+  if (cached) {
+    return cached;
+  }
+
+  const material = new THREE.MeshStandardMaterial(getBaseMaterialParams(materialName));
+  materialCache.set(materialName, material);
+  return material;
 };
 
 export const getLandingMaterial = materialFactory;
+
+export const disposeAllTextures = () => {
+  textures.metal.map.dispose();
+  textures.metal.normalMap.dispose();
+};

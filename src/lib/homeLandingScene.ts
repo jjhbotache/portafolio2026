@@ -7,7 +7,7 @@ import { fadeOutFloor, fadeInFloor } from './three/homeLandingEnvironment';
 import * as THREE from 'three';
 
 gsap.registerPlugin(ScrollTrigger);
-const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | null) => {
+const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | null, onReset?: () => void) => {
   let SpaceIntroPlayed = false;
   let previousScrollYProgress = -1;
   let goingDown = false;
@@ -15,6 +15,9 @@ const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | nu
   // executed when the user scrolls back up
   function reset3D () {
     if (!landingScene) return;
+    // also close the detail view (if it is open) so we never leave it dangling
+    // after the user scrolls back up out of the 3D scene
+    onReset?.();
     landingScene.hideTitles();
     // reset visibility of the overlay
     gsap.to(landingScene.overlay, {
@@ -130,8 +133,28 @@ function startTutorialIfNeeded(overlay: HTMLElement | null) {
       overlay?.removeEventListener('pointerdown', onPointerDown);
     }
 
-    function onPointerDown() {
+    function onPointerDown(event: PointerEvent) {
       stop();
+      // Forward the pointerdown to the canvas so OrbitControls starts the drag
+      // on the same click that dismissed the tutorial. Without this the user
+      // has to click twice: first to hide the tutorial, then again to grab the
+      // scene, because the tutorial overlay is on top of the canvas and
+      // captures the original pointerdown.
+      const canvas = overlay?.querySelector('canvas');
+      if (canvas) {
+        const forwarded = new PointerEvent('pointerdown', {
+          pointerId: event.pointerId,
+          clientX: event.clientX,
+          clientY: event.clientY,
+          button: event.button,
+          buttons: event.buttons,
+          isPrimary: event.isPrimary,
+          pointerType: event.pointerType,
+          bubbles: true,
+          cancelable: true,
+        });
+        canvas.dispatchEvent(forwarded);
+      }
     }
 
     overlay.addEventListener('pointerdown', onPointerDown);
@@ -267,16 +290,16 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       const tl = gsap.timeline();
 
       // Fade out background environment (use module helpers)
-      const floorTween = fadeOutFloor(0.3);
+      const floorTween = fadeOutFloor(0.2);
       if (floorTween) tl.add(floorTween, 0);
-      const diskTween = fadeOutDisk(0.3);
+      const diskTween = fadeOutDisk(0.2);
       if (diskTween) tl.add(diskTween, 0);
       // fade out the title
       const activeTitle = landingScene.titles.getActiveTitleGroup();
       if (activeTitle) {
         activeTitle.children.forEach((child) => {
           if (child instanceof THREE.Mesh) {
-            gsap.to(child.material, { opacity: 0, duration: 0.3, ease: 'sine.inOut' });
+            gsap.to(child.material, { opacity: 0, duration: 0.2, ease: 'sine.inOut' });
           }
         });
       }
@@ -396,9 +419,10 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
         
         
         
-        tl.to(targetGroup.rotation, { x: rotationX || 0, y: rotationY || 0, z: rotationZ || 0,  duration: 0.5, ease: 'power3.inOut',}, ">+=.1"); 
-        tl.to(targetGroup.position, { x: localTarget.x, y: localTarget.y, z: localTarget.z, duration: 0.5, ease: 'power3.inOut' }, "<");
-        tl.to(targetGroup.scale, { x: groupScale, y: groupScale, z: groupScale, duration: 0.5, ease: 'power3.inOut' }, "<");
+        const animationDuration = 0.3;
+        tl.to(targetGroup.rotation, { x: rotationX || 0, y: rotationY || 0, z: rotationZ || 0,  duration: animationDuration, ease: 'power3.inOut',}, ">-=0.1"); 
+        tl.to(targetGroup.position, { x: localTarget.x, y: localTarget.y, z: localTarget.z, duration: animationDuration, ease: 'power3.inOut' }, "<");
+        tl.to(targetGroup.scale, { x: groupScale, y: groupScale, z: groupScale, duration: animationDuration, ease: 'power3.inOut' }, "<");
         
       };
 
@@ -409,7 +433,7 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       }); // move backdrop to model anchor with some offset
 
       // Show HTML layout
-      tl.to(detailOverlay, { opacity: 1, display: 'grid', pointerEvents: 'auto', duration: 0.5 }, "<");
+      tl.to(detailOverlay, { opacity: 1, display: 'grid', pointerEvents: 'auto', duration: 0.2 }, "<");
 
     } else {
       
@@ -486,6 +510,10 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
 
   overlay.addEventListener('click', handleOverlayClick);
   detailOverlay.addEventListener('click', () => handleToggle("close"));
+
+  return {
+    close: () => handleToggle("close"),
+  };
 }
 
 export const initializeHomeLandingScene = () => {
@@ -500,11 +528,13 @@ export const initializeHomeLandingScene = () => {
     return;
   }
 
-  buildLandingTimeline(heroMask, landingScene);
+  const detailToggle = overlay && landingScene
+    ? setupDetailViewToggle(landingScene, overlay)
+    : null;
 
-  if (overlay && landingScene) {
-    setupDetailViewToggle(landingScene, overlay);
-  }
+  buildLandingTimeline(heroMask, landingScene, () => {
+    detailToggle?.close();
+  });
 };
 
 

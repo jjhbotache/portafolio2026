@@ -10,7 +10,14 @@ import { Icon } from 'astro-icon/components'
   >
     <div id="content" class="relative flex items-center justify-end gap-10 h-screen bg-linear-to-br from-gray-900 to-gray-950">
       
-      <img src="me.png" alt="me" class="fixed h-[150vh]  transform left-[25%] -translate-x-1/2 top-[65%] -translate-y-1/2 drop-shadow-secondary/20 drop-shadow-xl " />
+      <img
+        src="me.png"
+        alt="me"
+        loading="lazy"
+        decoding="async"
+        fetchpriority="low"
+        class="fixed h-[150vh]  transform left-[25%] -translate-x-1/2 top-[65%] -translate-y-1/2 drop-shadow-secondary/20 drop-shadow-xl "
+      />
       <h1 class=" max-w-222 text-[5.5rem] font-bold bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
         Welcome to my portfolio 
       </h1>

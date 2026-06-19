@@ -208,7 +208,7 @@ export const fadeInFloor = (duration = 0.5) => {
 
 export const createLandingStarField = () => {
   const starsGeometry = new THREE.BufferGeometry();
-  const starCount = 800;
+  const starCount = 500;
   const minDistanceFromCenter = 10;
   const positions = new Float32Array(starCount * 3);
 
@@ -243,13 +243,24 @@ export const createLandingStarField = () => {
 
   const starField = new THREE.Points(starsGeometry, starsMaterial);
 
+  const reducedMotion = typeof window !== 'undefined'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   return {
     starField,
     animate: (elapsedTime: number) => {
+      // Respect prefers-reduced-motion by freezing the starfield animation.
+      if (reducedMotion) {
+        return;
+      }
       // Very subtle movement to keep a calm sky feeling.
       starField.rotation.y = elapsedTime * 0.008;
       starField.rotation.x = Math.sin(elapsedTime * 0.05) * 0.01;
       starsMaterial.opacity = 0.82 + Math.sin(elapsedTime * 0.4) * 0.08;
+    },
+    dispose: () => {
+      starsGeometry.dispose();
+      starsMaterial.dispose();
     },
   };
 };
@@ -272,5 +283,21 @@ export const loadLandingEnvironment = (scene: THREE.Scene) => {
     'platformDark',
   );
   createFloorGrid(loader, scene);
-  
+};
+
+let envRoot: THREE.Group | null = null;
+let envStarFieldDispose: (() => void) | null = null;
+
+export const disposeLandingEnvironment = () => {
+  if (envRoot) {
+    envRoot.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+      }
+    });
+    envRoot = null;
+  }
+  envStarFieldDispose?.();
+  envStarFieldDispose = null;
+  envMaterials = [];
 };

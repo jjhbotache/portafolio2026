@@ -99,6 +99,7 @@ export const createLandingTitles = (scene: THREE.Scene, camera: THREE.Perspectiv
   const cameraLookTarget = new THREE.Vector3();
   const targetQuaternion = new THREE.Quaternion();
   const smoothQuaternion = new THREE.Quaternion();
+  const tempMatrix = new THREE.Matrix4();
   const animationsByModel = new Map<THREE.Object3D, THREE.AnimationClip[]>();
   const titlesRoot = new THREE.Group();
   titlesRoot.scale.set(0.03, 0.03, 0.03);
@@ -307,9 +308,8 @@ export const createLandingTitles = (scene: THREE.Scene, camera: THREE.Perspectiv
     // Keep the active title facing the camera with smooth slerp interpolation
     activeTitle.group.getWorldPosition(titleWorldPosition);
     cameraLookTarget.set(camera.position.x, titleWorldPosition.y, camera.position.z);
-    
-    // Create target quaternion from lookAt
-    const tempMatrix = new THREE.Matrix4();
+
+    // Reuse tempMatrix allocated in closure to avoid allocations in the render loop
     tempMatrix.lookAt(titleWorldPosition, cameraLookTarget, activeTitle.group.up);
     targetQuaternion.setFromRotationMatrix(tempMatrix);
 
