@@ -8,6 +8,7 @@ import { createLandingStarField, loadLandingEnvironment, disposeLandingEnvironme
 import { createLandingTitles } from './homeLandingTitles';
 import { configureMaterialAnisotropy, disposeAllTextures } from './materialFactory';
 import type { TitleBackgroundController } from './titlesBackgrounds/types';
+import type { SectionConfig } from '../sections';
 
 export type LandingScene = {
   overlay: HTMLElement;
@@ -19,6 +20,8 @@ export type LandingScene = {
   hideTitles: () => void;
   titles: ReturnType<typeof createLandingTitles>;
   pauseOrbit: () => void;
+  getActiveSectionIndex: () => number;
+  getActiveSection: () => SectionConfig | undefined;
   dispose: () => void;
 };
 
@@ -328,6 +331,8 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
     showTitles: titles.show,
     hideTitles: titles.hide,
     pauseOrbit,
+    getActiveSectionIndex: titles.getActiveSectionIndex,
+    getActiveSection: titles.getActiveSection,
     dispose,
   };
 };

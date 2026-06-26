@@ -31,6 +31,55 @@ html, body {
   --color-primary: #0065ca;
   --color-secondary: #00b5e8;
   --color-tertiary: #9f20e1;
+  --font-tron: 'Tron', system-ui, sans-serif;
+}
+
+/* Tron font used by the section titles */
+@font-face {
+  font-family: 'Tron';
+  src: url('/fonts/Tr2n.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+.tron-font {
+  font-family: var(--font-tron);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Letters created by textReveal.ts - hidden until the reveal animation runs */
+.tron-letter {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.6em);
+  will-change: opacity, transform;
+}
+
+/* When the element has data-revealed="true", letters are in their final state */
+[data-revealed="true"] .tron-letter,
+.tron-letters-revealed .tron-letter {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Caret used by the typing effect in the about-me section */
+.typing-caret::after {
+  content: '|';
+  display: inline-block;
+  margin-left: 0.05em;
+  color: currentColor;
+  animation: typing-caret-blink 1s steps(1) infinite;
+}
+
+@keyframes typing-caret-blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  50.01%, 100% {
+    opacity: 0;
+  }
 }
 
 .masked {
@@ -62,4 +111,9 @@ html, body {
 .masked > * {
   position: relative;
   z-index: 1;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
 }

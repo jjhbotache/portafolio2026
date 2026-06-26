@@ -3,15 +3,13 @@ import gsap from 'gsap';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { materialFactory } from './materialFactory';
-import { createTitleBackgroundControllers } from './titlesBackgrounds';
+import { sections, type SectionConfig } from '../sections';
+import type { TitleBackgroundController } from './titlesBackgrounds/types';
 
-const TITLE_SEQUENCE = [
-  // this order is important, it should match the title background controllers sequence in titlesBackgrounds/index.ts
-  '/3d/experiencia.stl',
-  '/3d/acerca de mi.stl',
-  '/3d/contacto.stl',
-  '/3d/proyectos.stl',
-] as const;
+// All section data (model path, background factory, detail view selector, ...)
+// is centralized in `src/lib/sections/index.ts`. The order of `sections` defines
+// the order of the titles around the disk.
+const TITLE_SEQUENCE: readonly string[] = sections.map((s) => s.titleModelPath);
 
 const ANGLE_PER_TITLE = (Math.PI * 2) / TITLE_SEQUENCE.length;
 
@@ -93,7 +91,10 @@ const loadTitleModel = (
 export const createLandingTitles = (scene: THREE.Scene, camera: THREE.PerspectiveCamera) => {
   const stlLoader = new STLLoader();
   const gltfLoader = new GLTFLoader();
-  const backgrounds = createTitleBackgroundControllers();
+  // Each section declares its own background factory. We instantiate them all
+  // up front so GSAP timelines, model references and Three.js state are owned
+  // by this landing scene and can be safely disposed together.
+  const backgrounds: TitleBackgroundController[] = sections.map((s) => s.background());
   const titleWorldPosition = new THREE.Vector3();
   const titlesRootWorldPosition = new THREE.Vector3();
   const cameraLookTarget = new THREE.Vector3();
@@ -109,10 +110,6 @@ export const createLandingTitles = (scene: THREE.Scene, camera: THREE.Perspectiv
   scene.add(titlesRoot);
 
   const titles = TITLE_SEQUENCE.map((path) => loadTitleModel(stlLoader, path, titlesRoot));
-
-  if (backgrounds.length !== titles.length) {
-    throw new Error('Title backgrounds amount must match title sequence amount.');
-  }
 
   let activeIndex = 0;
   let titlesVisible = false;
@@ -376,5 +373,8 @@ export const createLandingTitles = (scene: THREE.Scene, camera: THREE.Perspectiv
     setPaused,
     getActiveTitleGroup: () => titles[activeIndex]?.group,
     getActiveBackdropGroup: () => titles[activeIndex]?.backdropGroup,
+    getActiveSectionIndex: () => activeIndex,
+    getActiveSection: (): SectionConfig | undefined => sections[activeIndex],
   };
 };
+  

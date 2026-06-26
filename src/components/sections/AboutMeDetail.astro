@@ -1,0 +1,36 @@
+---
+// Detail view shown when the user opens the "About me" section.
+---
+
+
+<h2 class="col-start-1 col-span-3 text-4xl font-bold mb-4 tron-font text-secondary" data-lang="es">Acerca de mí</h2>
+<h2 class="col-start-1 col-span-3 text-4xl font-bold mb-4 hidden tron-font text-secondary" data-lang="en">About me</h2>
+<div class="row-start-2 col-start-1 col-span-3 row-span-2">
+  <p class="col-start-1 col-span-3 row-start-2 row-end-2 text-lg" data-lang="es">
+    Soy un desarrollador passionate por crear experiencias web interactivas y visualmente
+    atractivas, combinando diseño, animación y código limpio.
+  </p>
+  <p class="col-start-1 col-span-3 row-start-2 row-end-2 text-lg hidden" data-lang="en">
+    I'm a developer passionate about crafting interactive, visually rich web experiences
+    by blending design, animation and clean code.
+  </p>
+</div>
+
+<script>
+  const applyDetailLang = () => {
+    const lang = document.documentElement.lang || 'es';
+    document
+      .querySelectorAll<HTMLElement>('[data-section-detail] [data-lang]')
+      .forEach((el) => {
+        el.classList.toggle('hidden', el.dataset.lang !== lang);
+      });
+  };
+
+  applyDetailLang();
+
+  const observer = new MutationObserver(applyDetailLang);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['lang'],
+  });
+</script>

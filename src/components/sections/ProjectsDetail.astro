@@ -1,0 +1,447 @@
+---
+// Projects detail view. Renders every entry from the `projects` content
+// collection as a glassmorphic square card. Cards are placed in a horizontal
+// track that scrolls horizontally as the user scrolls vertically (GSAP
+// ScrollTrigger pin + scrub). On hover each card reveals a dark overlay
+// with a 2-line description. Click expands the card with a scale animation
+// and shows the full info (video, links, description).
+import { getCollection } from 'astro:content';
+
+const projects = await getCollection('projects');
+
+const slideColors = [
+  'from-secondary via-tertiary to-primary',
+  'from-primary via-secondary to-tertiary',
+  'from-tertiary via-primary to-secondary',
+  'from-secondary via-primary to-tertiary',
+  'from-primary via-tertiary to-secondary',
+  'from-tertiary via-secondary to-primary',
+];
+
+// Build a lookup of every project keyed by entry id. Emitted as a JSON
+// island so the client script can hydrate the modal without re-fetching.
+const projectsIndex: Record<
+  string,
+  { title: string; description: string; video: string; links: { label: string; url: string }[]; technologies: string[] }
+> = {};
+for (const proj of projects) {
+  projectsIndex[proj.id] = {
+    title: proj.data.title,
+    description: proj.data.description,
+    video: proj.data.video,
+    links: proj.data.links,
+    technologies: proj.data.technologies,
+  };
+}
+---
+
+<h2
+  class="col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto"
+  data-lang="es"
+  data-section-id="projects"
+  data-section-detail
+>Proyectos</h2>
+<h2
+  class="col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto hidden"
+  data-lang="en"
+  data-section-id="projects"
+  data-section-detail
+>Projects</h2>
+
+<div
+  id="projectsDetailedView"
+  class="row-start-2 col-span-3 row-span-2 text-white text-center pointer-events-auto overflow-y-auto overflow-x-hidden hide-scrollbar"
+  data-section-detail
+  data-section-id="projects"
+  data-section-content
+>
+  <div class="projects-content max-h-full h-full sticky top-0">
+    <div class="projects-track relative w-full h-[90%] ">
+      {projects.map((proj,i) => (
+        <article
+          class={`project-card absolute inset-y-0 left-20 w-[70vw] md:w-[60vw] max-w-3xl rounded-2xl border border-white/15  p-6 flex flex-col gap-6 shadow-sm text-left cursor-pointer ${slideColors[i % slideColors.length]} bg-linear-to-br`}
+          data-card-id={proj.id}
+          data-project-id={proj.id}
+          data-project-video={proj.data.video}
+          aria-label={`Ver detalles de ${proj.data.title}`}
+        >
+          <div class="flex flex-col gap-3 overflow-y-auto pr-2">
+            <h3 class="text-2xl font-bold leading-tight">{proj.data.title}</h3>
+            <p class="text-sm text-white/80 leading-relaxed line-clamp-3">
+              {proj.data.description}
+            </p>
+            <div class="flex flex-wrap gap-1.5">
+              {proj.data.technologies.map((tech) => (
+                <span class="text-xs px-2 py-1 rounded-full bg-secondary/15 text-secondary border border-secondary/30">
+                  {tech}
+                </span>
+              ))}
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              {proj.data.links.map((link) => (
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-sm px-3 py-1.5 rounded-full bg-secondary/15 text-secondary border border-secondary/30 hover:bg-secondary/25 transition-colors"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+    <div id="projectsSpacer"></div>
+  </div>
+</div>
+
+<!-- Expanded card modal (one shared instance, populated by JS) -->
+<!-- JSON island: every project's full payload keyed by entry id -->
+<script type="application/json" id="projects-data" set:html={JSON.stringify(projectsIndex)} />
+
+<div
+  id="projectModal"
+  class="project-modal fixed inset-0 z-60 hidden items-center justify-center bg-black/70 backdrop-blur-md p-6"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="projectModalTitle"
+>
+  <div
+    class="project-modal-content relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/15 bg-gray-900/90 p-6 flex flex-col gap-4"
+  >
+    <button
+      type="button"
+      class="project-modal-close absolute top-3 right-3 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xl"
+      aria-label="Cerrar"
+    >×</button>
+    <h3 id="projectModalTitle" class="text-2xl font-bold pr-10"></h3>
+    <div class="aspect-video w-full rounded-lg overflow-hidden bg-black">
+      <iframe
+        id="projectModalVideo"
+        class="w-full h-full"
+        src=""
+        title="Project demo"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+      ></iframe>
+    </div>
+    <p id="projectModalDescription" class="text-white/80 leading-relaxed"></p>
+    <div id="projectModalLinks" class="flex flex-wrap gap-2"></div>
+    <div id="projectModalTechs" class="flex flex-wrap gap-1.5"></div>
+  </div>
+</div>
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  // Convert a YouTube / Vimeo URL into an embeddable iframe URL when possible.
+  // Falls back to the original URL.
+  const toEmbedUrl = (raw: string): string => {
+    try {
+      const url = new URL(raw);
+      if (url.hostname.includes('youtube.com')) {
+        const v = url.searchParams.get('v');
+        if (v) return `https://www.youtube.com/embed/${v}`;
+      }
+      if (url.hostname === 'youtu.be') {
+        const id = url.pathname.replace('/', '');
+        if (id) return `https://www.youtube.com/embed/${id}`;
+      }
+      if (url.hostname.includes('vimeo.com')) {
+        const id = url.pathname.split('/').filter(Boolean).pop();
+        if (id) return `https://player.vimeo.com/video/${id}`;
+      }
+      return raw;
+    } catch {
+      return raw;
+    }
+  };
+
+  const applyProjectsLang = (_root: HTMLElement) => {
+    const lang = (document.documentElement.lang || 'es') as 'es' | 'en';
+    document
+      .querySelectorAll<HTMLElement>('[data-section-id="projects"][data-lang]')
+      .forEach((el) => {
+        el.classList.toggle('hidden', el.dataset.lang !== lang);
+      });
+  };
+
+  // Pull the full project payload (links, full description) from the JSON
+  // island emitted by the Astro template. The card itself only carries the
+  // visible subset in its data attributes.
+  const getProjectsIndex = (): Record<
+    string,
+    { title: string; description: string; video: string; links: { label: string; url: string }[]; technologies: string[] }
+  > => {
+    const el = document.querySelector<HTMLScriptElement>('#projects-data');
+    if (!el?.textContent) return {};
+    try {
+      return JSON.parse(el.textContent);
+    } catch {
+      return {};
+    }
+  };
+
+  const openProjectModal = (projectId: string) => {
+    const data = getProjectsIndex()[projectId];
+    if (!data) return;
+
+    const modal = document.querySelector<HTMLElement>('#projectModal');
+    if (!modal) return;
+
+    const titleEl = modal.querySelector<HTMLElement>('#projectModalTitle');
+    const descEl = modal.querySelector<HTMLElement>('#projectModalDescription');
+    const videoEl = modal.querySelector<HTMLIFrameElement>('#projectModalVideo');
+    const linksEl = modal.querySelector<HTMLElement>('#projectModalLinks');
+    const techsEl = modal.querySelector<HTMLElement>('#projectModalTechs');
+
+    if (titleEl) titleEl.textContent = data.title;
+    if (descEl) descEl.textContent = data.description;
+    if (videoEl) videoEl.src = toEmbedUrl(data.video);
+
+    if (linksEl) {
+      linksEl.innerHTML = '';
+      data.links.forEach((link) => {
+        const a = document.createElement('a');
+        a.href = link.url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.className = 'text-sm px-3 py-1.5 rounded-full bg-secondary/15 text-secondary border border-secondary/30 hover:bg-secondary/25 transition-colors';
+        a.textContent = link.label;
+        linksEl.appendChild(a);
+      });
+    }
+
+    if (techsEl) {
+      techsEl.innerHTML = '';
+      data.technologies.forEach((tech) => {
+        const span = document.createElement('span');
+        span.className = 'text-xs px-2 py-1 rounded-full bg-white/10 text-white/80 border border-white/20';
+        span.textContent = tech;
+        techsEl.appendChild(span);
+      });
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    gsap.fromTo(
+      modal.querySelector('.project-modal-content'),
+      { scale: 0.85, opacity: 0 },
+      { scale: 1, opacity: 1, duration: 0.35, ease: 'power3.out' }
+    );
+  };
+
+  const closeProjectModal = () => {
+    const modal = document.querySelector<HTMLElement>('#projectModal');
+    if (!modal) return;
+    const videoEl = modal.querySelector<HTMLIFrameElement>('#projectModalVideo');
+    if (videoEl) videoEl.src = '';
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  };
+
+  // Drive a horizontal track with vertical scroll using a GSAP timeline.
+  // The timeline owns the tween (cards x) and the ScrollTrigger, so callers
+  // can play / pause / refresh / kill it via the returned handle.
+  //
+  // IMPORTANT: this section uses `#detail-overlay` as the SCROLLER (the
+  // element that actually scrolls, since it has `overflow-y-auto`) and
+  // `#projectsDetailedView` as the TRIGGER (the element whose position
+  // is measured against the scroller). The detail overlay sits on top of
+  // a fixed three.js scene that consumes window scroll, so we cannot
+  // listen to window scroll here - we listen to the overlay's scroll.
+  type ProjectsAnimationHandle = {
+    timeline: gsap.core.Timeline;
+    scrollTrigger: ScrollTrigger;
+    destroy: () => void;
+  };
+
+  const buildProjectsScroll = (root: HTMLElement): ProjectsAnimationHandle | null => {
+    const track = root.querySelector<HTMLElement>('.projects-track');
+    const content = root.querySelector<HTMLElement>('.projects-content');
+    const wrapper = root.querySelector<HTMLElement>('#projectsDetailedView');
+
+    if (!track || !root) return null;
+
+    const cards = Array.from(track.querySelectorAll<HTMLElement>('.project-card'));
+    const numCards = cards.length;
+    if (numCards === 0) return null;
+
+    // Adaptive stack offset: limit it so the leftmost card never extends
+    // past the track's left edge (the parent clips with overflow-x-hidden).
+    const cardWidth = cards[0].offsetWidth;
+    const trackWidth = track.offsetWidth;
+    const maxStackWidth = Math.max(0, trackWidth - cardWidth);
+    const desiredOffset = -10;
+    const STACK_OFFSET_PX = numCards > 1
+      ? Math.min(desiredOffset, maxStackWidth / (numCards - 1))
+      : 0;
+
+    const STEP_DURATION = 1;
+    const totalDuration = Math.max(0, (numCards - 1) * STEP_DURATION);
+
+    const timeline = gsap.timeline({
+      paused: true,
+      defaults: { ease: 'power2.inOut' },
+    });
+
+    // For each new card k (1..N-1):
+    //   - all previously visible cards shift left by STACK_OFFSET
+    //   - card[k] slides in from a direction: right -> left -> bottom -> top (repeats)
+    // Result: each card stays partially visible on the left as a stack,
+    // with the newest card always on top.
+    const slideDirections = [
+      { x: '200%', y: 0 },   // right
+      { x: '-200%', y: 0 },  // left
+      { x: 0, y: '200%' }   // bottom
+    ];
+
+    for (let k = 1; k < numCards; k++) {
+      const segmentTime = (k - 1) * STEP_DURATION;
+      const dir = slideDirections[(k - 1) % slideDirections.length];
+
+      for (let i = 0; i < k; i++) {
+        timeline.to(
+          cards[i],
+          { y: `-=${STACK_OFFSET_PX}`, duration: STEP_DURATION },
+          segmentTime,
+        );
+      }
+
+      timeline.fromTo(
+        cards[k],
+        { x: dir.x, y: dir.y },
+        { x: 0, y: 0, duration: STEP_DURATION },
+        segmentTime,
+      );
+    }
+
+    // One viewport of scroll per card transition.
+    const getScrollDistance = () => totalDuration * window.innerHeight;
+
+    const st = ScrollTrigger.create({
+      scroller: wrapper,
+      trigger: content,
+      start: 'top top',
+      end: () => `+=${getScrollDistance()}`,
+      scrub: 0.6,
+      animation: timeline,
+    });
+
+    // Spacer height = scroll distance so the overlay has enough scroll room
+    // to drive the animation end-to-end. Kept in sync with `end` via refresh.
+    const spacer = document.querySelector<HTMLElement>('#projectsSpacer');
+    if (spacer) {
+      spacer.style.height = `${getScrollDistance()}px`;
+    }
+
+    return {
+      timeline,
+      scrollTrigger: st,
+      destroy: () => {
+        st.kill();
+        timeline.kill();
+      },
+    };
+  };
+
+  // Setup: language observer + click handlers. The scroll timeline is
+  // built lazily (in startProjects) so the distance is measured with
+  // the section actually visible.
+  const setupProjects = (root: HTMLElement) => {
+    if (root.dataset.projectsInit === 'true') return;
+    root.dataset.projectsInit = 'true';
+
+    applyProjectsLang(root);
+
+    const observer = new MutationObserver(() => applyProjectsLang(root));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['lang'],
+    });
+
+    const cards = root.querySelectorAll<HTMLElement>('.project-card');
+    cards.forEach((card) => {
+      card.addEventListener('click', () => {
+        const id = card.dataset.projectId;
+        if (id) openProjectModal(id);
+      });
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          const id = card.dataset.projectId;
+          if (id) openProjectModal(id);
+        }
+      });
+    });
+
+    const modal = document.querySelector<HTMLElement>('#projectModal');
+    const closeBtn = modal?.querySelector<HTMLElement>('.project-modal-close');
+    if (closeBtn && modal) {
+      closeBtn.addEventListener('click', () => closeProjectModal());
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeProjectModal();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+          closeProjectModal();
+        }
+      });
+    }
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => ScrollTrigger.refresh());
+    }
+    window.addEventListener('resize', () => ScrollTrigger.refresh());
+  };
+
+  // Stored handle to the scroll timeline. Rebuilt on each open so the
+  // distance is computed with the section visible.
+  let projectsHandle: ProjectsAnimationHandle | null = null;
+
+  const startProjects = () => {
+    const root = document.querySelector<HTMLElement>('#detail-overlay')!;
+    setupProjects(root);
+
+    // Tear down any prior handle (close -> open flow).
+    if (projectsHandle) {
+      projectsHandle.destroy();
+      projectsHandle = null;
+    }
+
+    // Build the scroll timeline now that the section is visible so widths
+    // are computed correctly.
+    projectsHandle = buildProjectsScroll(root);
+  };
+
+  const stopProjects = () => {
+    if (projectsHandle) {
+      projectsHandle.destroy();
+      projectsHandle = null;
+    }
+  };
+
+  // Run on initial page load and after Astro's client-side navigation.
+  const bootstrap = () => {
+    const root = document.querySelector<HTMLElement>('#projectsDetailedView');
+    if (root) setupProjects(root);
+  };
+  document.addEventListener('astro:page-load', bootstrap);
+  if (document.readyState !== 'loading') {
+    bootstrap();
+  } else {
+    document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+  }
+
+  // Expose hooks for the scene orchestrator.
+  (window as unknown as { __projectsHooks?: unknown }).__projectsHooks = {
+    start: startProjects,
+    stop: stopProjects,
+  };
+</script>
+

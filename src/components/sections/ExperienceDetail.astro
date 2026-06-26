@@ -1,0 +1,357 @@
+---
+// Experience detail view. Lists every entry from the `experiences` content
+// collection as a horizontal card. Each card has the meta on the left and a
+// vertical Swiper with the project screenshots on the right. Cards are
+// driven by a horizontal scroll bound to the page's vertical scroll (GSAP
+// ScrollTrigger with pin + scrub) so they appear to move from right to left
+// as the user scrolls down, stacking in the viewport.
+import { getCollection } from 'astro:content';
+
+const experiences = await getCollection('experiences');
+
+const monthsEs = [
+  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+];
+const monthsEn = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+// Lookup tables for the current locale (used to format the period string).
+const monthsByLang = {
+  es: monthsEs,
+  en: monthsEn,
+} as const;
+---
+
+<h2
+  class="col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto"
+  data-lang="es"
+  data-section-id="experience"
+  data-section-detail
+>Experiencia</h2>
+<h2
+  class="col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto hidden"
+  data-lang="en"
+  data-section-id="experience"
+  data-section-detail
+>Experience</h2>
+
+<div
+  id="experienceDetailedView"
+  class=" row-start-2 col-span-3 row-span-2 text-white text-center pointer-events-auto overflow-y-auto overflow-x-hidden hide-scrollbar"
+  data-section-detail
+  data-section-id="experience"
+  data-section-content
+>
+  <div
+    class="experience-content max-h-full h-full sticky top-0"
+  >
+    <div class="experience-track relative w-full h-[90%] overflow-hidden ">
+      {experiences.map((exp) => {
+        const periodEs = `${monthsEs[exp.data.start.month - 1]} ${exp.data.start.year} — ${monthsEs[exp.data.end.month - 1]} ${exp.data.end.year}`;
+        const periodEn = `${monthsEn[exp.data.start.month - 1]} ${exp.data.start.year} — ${monthsEn[exp.data.end.month - 1]} ${exp.data.end.year}`;
+        return (
+          <article
+            class="experience-card absolute inset-y-0 left-20 w-[70vw] md:w-[60vw] max-w-3xl rounded-2xl border border-white/15 bg-tertiary backdrop-blur-md p-6 flex flex-col md:flex-row gap-6 shadow-sm"
+            data-card-id={exp.id}
+            data-period-es={periodEs}
+            data-period-en={periodEn}
+          >
+            <div class="md:w-2/5 flex flex-col gap-3 overflow-y-auto pr-2">
+              <h3 class="text-2xl font-bold leading-tight">{exp.data.title}</h3>
+              <div class="flex flex-wrap items-center gap-3">
+                {exp.data.enterprises.map((ent) => (
+                  <a
+                    href={ent.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex items-center gap-2 text-sm text-white/80 hover:text-secondary transition-colors"
+                  >
+                    <img
+                      src={ent.logo}
+                      alt={ent.name}
+                      class="w-6 h-6 rounded-sm bg-white/10"
+                      loading="lazy"
+                    />
+                    <span>{ent.name}</span>
+                  </a>
+                ))}
+              </div>
+              <p
+                class="text-sm text-white/60 italic"
+                data-period-display
+              >{periodEs}</p>
+              <p class="text-sm text-white/80 leading-relaxed">
+                {exp.data.description}
+              </p>
+              <div class="flex flex-wrap gap-1.5">
+                {exp.data.technologies.map((tech) => (
+                  <span class="text-xs px-2 py-1 rounded-full bg-secondary/15 text-secondary border border-secondary/30">
+                    {tech}
+                  </span>
+                ))}
+              </div>
+              <div class="mt-2 text-sm text-white/70 leading-relaxed prose prose-invert max-w-none">
+                <p>{exp.data.content}</p>
+              </div>
+            </div>
+            <div class="md:w-3/5 relative rounded-xl overflow-hidden bg-black/40 min-h-65">
+              {exp.data.imgs.length > 0 ? (
+                <div
+                  class="swiper h-full"
+                  data-swiper-id={exp.id}
+                >
+                  <div class="swiper-wrapper h-full">
+                    {exp.data.imgs.map((src) => (
+                      <div class="swiper-slide">
+                        <img
+                          src={src}
+                          alt={exp.data.title}
+                          class="w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div class="swiper-pagination"></div>
+                </div>
+              ) : (
+                <div class="w-full h-full flex items-center justify-center text-white/40 text-sm">
+                  Sin imágenes
+                </div>
+              )}
+            </div>
+          </article>
+        );
+      })}
+    </div>
+    <!-- add space to make it scrollable -->
+    <div id="experienceSpacer"></div>
+  </div>
+</div>
+
+<script>
+  import Swiper from 'swiper';
+  import { Pagination } from 'swiper/modules';
+  import 'swiper/css';
+  import 'swiper/css/pagination';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  import { gsap } from 'gsap';
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  // Initialize every Swiper inside the experience section.
+  // Each card has its own vertical slider with clickable pagination.
+  const initExperienceSwipers = (root: HTMLElement) => {
+    const swipers = root.querySelectorAll<HTMLElement>('[data-swiper-id]');
+    swipers.forEach((el) => {
+      new Swiper(el, {
+        direction: 'vertical',
+        modules: [Pagination],
+        pagination: {
+          el: el.querySelector('.swiper-pagination') as HTMLElement,
+          clickable: true,
+        },
+        mousewheel: true,
+        grabCursor: true,
+        loop: true,
+      });
+    });
+  };
+
+  // Drive a horizontal track with vertical scroll using a GSAP timeline.
+  // The timeline owns the tween (track x) and the ScrollTrigger, so callers
+  // can play / pause / refresh / kill it via the returned handle.
+  //
+  // IMPORTANT: this section uses `#detail-overlay` as the SCROLLER (the
+  // element that actually scrolls, since it has `overflow-y-auto`) and
+  // `#experienceDetailedView` as the TRIGGER (the element whose position
+  // is measured against the scroller). The detail overlay sits on top of
+  // a fixed three.js scene that consumes window scroll, so we cannot
+  // listen to window scroll here — we listen to the overlay's scroll.
+  //
+  // The trigger element grows vertically via `growSection()` so the
+  // overlay has enough scroll distance to drive the animation end-to-end.
+  // The sticky content pins itself via CSS (`position: sticky; top: 0`)
+  // and stays in view while the user scrolls past the extra height.
+  type ExperienceAnimationHandle = {
+    timeline: gsap.core.Timeline;
+    scrollTrigger: ScrollTrigger;
+    destroy: () => void;
+  };
+
+  const buildExperienceScroll = (root: HTMLElement): ExperienceAnimationHandle | null => {
+    const track = root.querySelector<HTMLElement>('.experience-track');
+    const content = root.querySelector<HTMLElement>('.experience-content');
+    const wrapper = root.querySelector<HTMLElement>('#experienceDetailedView');
+
+    if (!track || !root) return null;
+
+    const cards = Array.from(track.querySelectorAll<HTMLElement>('.experience-card'));
+    const numCards = cards.length;
+    if (numCards === 0) return null;
+
+    // Adaptive stack offset: limit it so the leftmost card never extends
+    // past the track's left edge (the parent clips with overflow-x-hidden).
+    const cardWidth = cards[0].offsetWidth;
+    const trackWidth = track.offsetWidth;
+    const maxStackWidth = Math.max(0, trackWidth - cardWidth);
+    const desiredOffset = -50;
+    const STACK_OFFSET_PX = numCards > 1
+      ? Math.min(desiredOffset, maxStackWidth / (numCards - 1))
+      : 0;
+
+    // Initial state: card[0] visible at the front, others off-screen to the right.
+    // DOM order sets z-index so the newest card is always rendered on top.
+    
+    // cards.slice(1).forEach((card, i) => {
+    //   gsap.set(card, { x:  10000 });
+    // });
+
+    const STEP_DURATION = 1;
+    const totalDuration = Math.max(0, (numCards - 1) * STEP_DURATION);
+
+    const timeline = gsap.timeline({
+      paused: true,
+      defaults: { ease: 'power2.inOut' },
+    });
+
+    // For each new card k (1..N-1):
+    //   - all previously visible cards shift left by STACK_OFFSET
+    //   - card[k] slides in from the right
+    // Result: each card stays partially visible on the left as a stack,
+    // with the newest card always on top.
+    for (let k = 1; k < numCards; k++) {
+      const segmentTime = (k - 1) * STEP_DURATION;
+
+      for (let i = 0; i < k; i++) {
+        timeline.to(
+          cards[i],
+          { x: `-=${STACK_OFFSET_PX}`, duration: STEP_DURATION },
+          segmentTime,
+        );
+      }
+
+      timeline.fromTo(
+        cards[k],
+        { x: '200%' },
+        { x: 0, duration: STEP_DURATION },
+        segmentTime,
+      );
+    }
+
+    // One viewport of scroll per card transition.
+    const getScrollDistance = () => totalDuration * window.innerHeight;
+
+    const st = ScrollTrigger.create({
+      scroller: wrapper,
+      trigger: content,
+      start: 'top top',
+      end: () => `+=${getScrollDistance()}`,
+      scrub: 0.6,
+      animation: timeline,
+    });
+
+    // Spacer height = scroll distance so the overlay has enough scroll room
+    // to drive the animation end-to-end. Kept in sync with `end` via refresh.
+    const spacer = document.querySelector<HTMLElement>('#experienceSpacer');
+    if (spacer) {
+      spacer.style.height = `${getScrollDistance()}px`;
+    }
+
+    return {
+      timeline,
+      scrollTrigger: st,
+      destroy: () => {
+        st.kill();
+        timeline.kill();
+      },
+    };
+  };
+
+  // Show only the content matching the document's current language.
+  const applyExperienceLang = (_root: HTMLElement) => {
+    const lang = (document.documentElement.lang || 'es') as 'es' | 'en';
+    document
+      .querySelectorAll<HTMLElement>('[data-section-id="experience"][data-lang]')
+      .forEach((el) => {
+        el.classList.toggle('hidden', el.dataset.lang !== lang);
+      });
+    document.querySelectorAll<HTMLElement>('[data-period-display]').forEach((el) => {
+      const card = el.closest<HTMLElement>('[data-card-id]');
+      if (!card) return;
+      el.textContent = card.dataset[lang === 'es' ? 'periodEs' : 'periodEn'] ?? '';
+    });
+  };
+
+  // Setup: Swipers + language observer. The scroll timeline is built lazily
+  // (in startExperience) so the distance is measured with the section
+  // actually visible, otherwise `scrollWidth` is 0 because the parent grid
+  // item is hidden.
+  const setupExperience = (root: HTMLElement) => {
+    if (root.dataset.experienceInit === 'true') return;
+    root.dataset.experienceInit = 'true';
+
+    initExperienceSwipers(root);
+    applyExperienceLang(root);
+
+    const observer = new MutationObserver(() => applyExperienceLang(root));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['lang'],
+    });
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => ScrollTrigger.refresh());
+    }
+    window.addEventListener('resize', () => ScrollTrigger.refresh());
+  };
+
+  // Stored handle to the scroll timeline. Rebuilt on each open so the
+  // distance is computed with the section visible.
+  let experienceHandle: ExperienceAnimationHandle | null = null;
+
+  const startExperience = () => {
+    const root = document.querySelector<HTMLElement>('#detail-overlay')!;
+    setupExperience(root );
+
+    // Tear down any prior handle (close -> open flow).
+    if (experienceHandle) {
+      experienceHandle.destroy();
+      experienceHandle = null;
+    }
+
+    // Build the scroll timeline now that the section is visible so widths
+    // are computed correctly.
+    experienceHandle = buildExperienceScroll(root);
+  };
+
+  const stopExperience = () => {
+    if (experienceHandle) {
+      experienceHandle.destroy();
+      experienceHandle = null;
+    }
+  };
+
+  // Run on initial page load and after Astro's client-side navigation.
+  const bootstrap = () => {
+    const root = document.querySelector<HTMLElement>('#experienceDetailedView');
+    if (root) setupExperience(root);
+  };
+  document.addEventListener('astro:page-load', bootstrap);
+  if (document.readyState !== 'loading') {
+    bootstrap();
+  } else {
+    document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+  }
+
+  // Expose hooks for the scene orchestrator.
+  (window as unknown as { __experienceHooks?: unknown }).__experienceHooks = {
+    start: startExperience,
+    stop: stopExperience,
+  };
+</script>
+
