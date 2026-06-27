@@ -1,0 +1,42 @@
+{
+  "es": {
+    "nav.lang.toggle": "Cambiar a inglés",
+    "nav.lang.shortLabel": "EN",
+    "nav.lang.fullLabel": "English",
+    "ui.close": "Cerrar",
+    "ui.closeDetailAria": "Cerrar vista detallada",
+    "ui.closeSymbol": "‹",
+    "sections.experience.title": "Experiencia",
+    "sections.aboutMe.title": "Acerca de mí",
+    "sections.aboutMe.body": "Soy un desarrollador passionate por crear experiencias web interactivas y visualmente atractivas, combinando diseño, animación y código limpio.",
+    "sections.contact.title": "Contacto",
+    "sections.contact.body": "¿Te interesa trabajar conmigo? Escríbeme y charlamos sobre tu proyecto.",
+    "sections.projects.title": "Proyectos",
+    "projects.modal.closeAria": "Cerrar",
+    "projects.card.viewDetailsAria": "Ver detalles de {title}",
+    "projects.modal.descriptionLabel": "Descripción",
+    "projects.modal.techsLabel": "Tecnologías",
+    "experience.noImages": "Sin imágenes",
+    "months.short": ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+  },
+  "en": {
+    "nav.lang.toggle": "Switch to Spanish",
+    "nav.lang.shortLabel": "ES",
+    "nav.lang.fullLabel": "Español",
+    "ui.close": "Close",
+    "ui.closeDetailAria": "Close detail view",
+    "ui.closeSymbol": "‹",
+    "sections.experience.title": "Experience",
+    "sections.aboutMe.title": "About me",
+    "sections.aboutMe.body": "I'm a developer passionate about crafting interactive, visually rich web experiences by blending design, animation and clean code.",
+    "sections.contact.title": "Contact",
+    "sections.contact.body": "Interested in working together? Reach out and let's talk about your project.",
+    "sections.projects.title": "Projects",
+    "projects.modal.closeAria": "Close",
+    "projects.card.viewDetailsAria": "View details of {title}",
+    "projects.modal.descriptionLabel": "Description",
+    "projects.modal.techsLabel": "Technologies",
+    "experience.noImages": "No images",
+    "months.short": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  }
+}

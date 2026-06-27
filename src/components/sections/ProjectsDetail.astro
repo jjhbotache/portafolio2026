@@ -6,6 +6,11 @@
 // with a 2-line description. Click expands the card with a scale animation
 // and shows the full info (video, links, description).
 import { getCollection } from 'astro:content';
+import { marked } from 'marked';
+import { resolveBilingual, t, type Lang } from '../../i18n/utils';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props as Props;
 
 const projects = await getCollection('projects');
 
@@ -18,35 +23,93 @@ const slideColors = [
   'from-tertiary via-secondary to-primary',
 ];
 
-// Build a lookup of every project keyed by entry id. Emitted as a JSON
-// island so the client script can hydrate the modal without re-fetching.
-const projectsIndex: Record<
-  string,
-  { title: string; description: string; video: string; links: { label: string; url: string }[]; technologies: string[] }
-> = {};
+interface ResolvedProject {
+  id: string;
+  title: string;
+  description: string;
+  technologies: string[];
+  links: { label: string; url: string }[];
+  video: string;
+  contentHtml: string;
+}
+
+const resolvedProjects: ResolvedProject[] = projects.map((proj) => ({
+  id: proj.id,
+  title: resolveBilingual(proj.data.title, lang) ?? '',
+  description: resolveBilingual(proj.data.description, lang) ?? '',
+  technologies: (resolveBilingual(proj.data.technologies, lang) ?? []) as string[],
+  links: proj.data.links.map((link) => ({
+    label: resolveBilingual(link.label, lang) ?? '',
+    url: link.url,
+  })),
+  video: proj.data.video,
+  contentHtml: marked.parse(resolveBilingual(proj.data.content, lang) ?? '') as string,
+}));
+
+// JSON island used by the client script to hydrate the modal without
+// re-fetching. Includes both languages so the modal can swap text in
+// place when the user switches languages at runtime.
+interface ModalPayload {
+  title: { en: string; es: string };
+  description: { en: string; es: string };
+  technologies: { en: string[]; es: string[] };
+  contentHtml: { en: string; es: string };
+  video: string;
+  links: { label: { en: string; es: string }; url: string }[];
+}
+
+const projectsIndex: Record<string, ModalPayload> = {};
 for (const proj of projects) {
   projectsIndex[proj.id] = {
-    title: proj.data.title,
-    description: proj.data.description,
+    title: {
+      en: resolveBilingual(proj.data.title, 'en') ?? '',
+      es: resolveBilingual(proj.data.title, 'es') ?? '',
+    },
+    description: {
+      en: resolveBilingual(proj.data.description, 'en') ?? '',
+      es: resolveBilingual(proj.data.description, 'es') ?? '',
+    },
+    technologies: {
+      en: (resolveBilingual(proj.data.technologies, 'en') ?? []) as string[],
+      es: (resolveBilingual(proj.data.technologies, 'es') ?? []) as string[],
+    },
+    contentHtml: {
+      en: marked.parse(resolveBilingual(proj.data.content, 'en') ?? '') as string,
+      es: marked.parse(resolveBilingual(proj.data.content, 'es') ?? '') as string,
+    },
     video: proj.data.video,
-    links: proj.data.links,
-    technologies: proj.data.technologies,
+    links: proj.data.links.map((link) => ({
+      label: {
+        en: resolveBilingual(link.label, 'en') ?? '',
+        es: resolveBilingual(link.label, 'es') ?? '',
+      },
+      url: link.url,
+    })),
   };
 }
 ---
 
+<!-- Section wrapper: contains the title, content, 3D model anchor and close
+     button. Uses `display: contents` so the children participate in the
+     parent (#detail-overlay) grid when the section is active. -->
+<div
+  id="projectsDetailRoot"
+  class="contents hidden"
+  data-section-detail
+  data-section-id="projects"
+>
 <h2
-  class="col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto"
+  class:list={["col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto", lang === 'es' ? '' : 'hidden']}
   data-lang="es"
   data-section-id="projects"
   data-section-detail
->Proyectos</h2>
+>{t('es', 'sections.projects.title')}</h2>
 <h2
-  class="col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto hidden"
+  class:list={["col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto", lang === 'en' ? '' : 'hidden']}
   data-lang="en"
   data-section-id="projects"
   data-section-detail
->Projects</h2>
+>{t('en', 'sections.projects.title')}</h2>
 
 <div
   id="projectsDetailedView"
@@ -57,28 +120,28 @@ for (const proj of projects) {
 >
   <div class="projects-content max-h-full h-full sticky top-0">
     <div class="projects-track relative w-full h-[90%] ">
-      {projects.map((proj,i) => (
+      {resolvedProjects.map((proj, i) => (
         <article
           class={`project-card absolute inset-y-0 left-20 w-[70vw] md:w-[60vw] max-w-3xl rounded-2xl border border-white/15  p-6 flex flex-col gap-6 shadow-sm text-left cursor-pointer ${slideColors[i % slideColors.length]} bg-linear-to-br`}
           data-card-id={proj.id}
           data-project-id={proj.id}
-          data-project-video={proj.data.video}
-          aria-label={`Ver detalles de ${proj.data.title}`}
+          data-project-video={proj.video}
+          aria-label={t(lang, 'projects.card.viewDetailsAria', { title: proj.title })}
         >
           <div class="flex flex-col gap-3 overflow-y-auto pr-2">
-            <h3 class="text-2xl font-bold leading-tight">{proj.data.title}</h3>
+            <h3 class="text-2xl font-bold leading-tight">{proj.title}</h3>
             <p class="text-sm text-white/80 leading-relaxed line-clamp-3">
-              {proj.data.description}
+              {proj.description}
             </p>
             <div class="flex flex-wrap gap-1.5">
-              {proj.data.technologies.map((tech) => (
+              {proj.technologies.map((tech) => (
                 <span class="text-xs px-2 py-1 rounded-full bg-secondary/15 text-secondary border border-secondary/30">
                   {tech}
                 </span>
               ))}
             </div>
             <div class="flex flex-wrap items-center gap-3">
-              {proj.data.links.map((link) => (
+              {proj.links.map((link) => (
                 <a
                   href={link.url}
                   target="_blank"
@@ -95,11 +158,21 @@ for (const proj of projects) {
     </div>
     <div id="projectsSpacer"></div>
   </div>
+  <!-- 3D model anchor positioned within this section -->
+  <div id="modelBg" class="fixed top-1/2 right-0 w-[33vw] h-[33vh] transform -translate-y-1/2 pointer-events-none z-0"></div>
+  <!-- Close button for this section's detail view -->
+  <button
+    id="detail-close"
+    type="button"
+    class="hidden fixed top-4 left-4 md:top-6 md:left-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white text-2xl flex items-center justify-center transition-colors z-55"
+    aria-label={t(lang, 'ui.closeDetailAria')}
+    data-i18n-attr={`aria-label:ui.closeDetailAria`}
+  >&lsaquo;</button>
 </div>
 
 <!-- Expanded card modal (one shared instance, populated by JS) -->
-<!-- JSON island: every project's full payload keyed by entry id -->
-<script type="application/json" id="projects-data" set:html={JSON.stringify(projectsIndex)} />
+<!-- JSON island: every project's full payload keyed by entry id (both langs) -->
+<script is:inline type="application/json" id="projects-data" set:html={JSON.stringify(projectsIndex)} />
 
 <div
   id="projectModal"
@@ -114,7 +187,8 @@ for (const proj of projects) {
     <button
       type="button"
       class="project-modal-close absolute top-3 right-3 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xl"
-      aria-label="Cerrar"
+      aria-label={t(lang, 'projects.modal.closeAria')}
+      data-i18n-attr="aria-label:projects.modal.closeAria"
     >×</button>
     <h3 id="projectModalTitle" class="text-2xl font-bold pr-10"></h3>
     <div class="aspect-video w-full rounded-lg overflow-hidden bg-black">
@@ -127,6 +201,7 @@ for (const proj of projects) {
         allowfullscreen
       ></iframe>
     </div>
+    <div id="projectModalContent" class="text-white/80 leading-relaxed prose prose-invert max-w-none"></div>
     <p id="projectModalDescription" class="text-white/80 leading-relaxed"></p>
     <div id="projectModalLinks" class="flex flex-wrap gap-2"></div>
     <div id="projectModalTechs" class="flex flex-wrap gap-1.5"></div>
@@ -162,8 +237,23 @@ for (const proj of projects) {
     }
   };
 
+  type Lang = 'en' | 'es';
+  type ModalPayload = {
+    title: Record<Lang, string>;
+    description: Record<Lang, string>;
+    technologies: Record<Lang, string[]>;
+    contentHtml: Record<Lang, string>;
+    video: string;
+    links: { label: Record<Lang, string>; url: string }[];
+  };
+
+  const getCurrentLang = (): Lang => {
+    const seg = window.location.pathname.split('/').filter(Boolean)[0];
+    return seg === 'es' || seg === 'en' ? seg : 'en';
+  };
+
   const applyProjectsLang = (_root: HTMLElement) => {
-    const lang = (document.documentElement.lang || 'es') as 'es' | 'en';
+    const lang = (document.documentElement.lang || 'es') as Lang;
     document
       .querySelectorAll<HTMLElement>('[data-section-id="projects"][data-lang]')
       .forEach((el) => {
@@ -174,10 +264,7 @@ for (const proj of projects) {
   // Pull the full project payload (links, full description) from the JSON
   // island emitted by the Astro template. The card itself only carries the
   // visible subset in its data attributes.
-  const getProjectsIndex = (): Record<
-    string,
-    { title: string; description: string; video: string; links: { label: string; url: string }[]; technologies: string[] }
-  > => {
+  const getProjectsIndex = (): Record<string, ModalPayload> => {
     const el = document.querySelector<HTMLScriptElement>('#projects-data');
     if (!el?.textContent) return {};
     try {
@@ -187,7 +274,9 @@ for (const proj of projects) {
     }
   };
 
-  const openProjectModal = (projectId: string) => {
+  // Render a modal for a given project. The lang argument controls which
+  // language version of each bilingual field is shown.
+  const renderProjectModal = (projectId: string, lang: Lang) => {
     const data = getProjectsIndex()[projectId];
     if (!data) return;
 
@@ -196,13 +285,13 @@ for (const proj of projects) {
 
     const titleEl = modal.querySelector<HTMLElement>('#projectModalTitle');
     const descEl = modal.querySelector<HTMLElement>('#projectModalDescription');
-    const videoEl = modal.querySelector<HTMLIFrameElement>('#projectModalVideo');
+    const contentEl = modal.querySelector<HTMLElement>('#projectModalContent');
     const linksEl = modal.querySelector<HTMLElement>('#projectModalLinks');
     const techsEl = modal.querySelector<HTMLElement>('#projectModalTechs');
 
-    if (titleEl) titleEl.textContent = data.title;
-    if (descEl) descEl.textContent = data.description;
-    if (videoEl) videoEl.src = toEmbedUrl(data.video);
+    if (titleEl) titleEl.textContent = data.title[lang];
+    if (descEl) descEl.textContent = data.description[lang];
+    if (contentEl) contentEl.innerHTML = data.contentHtml[lang] ?? '';
 
     if (linksEl) {
       linksEl.innerHTML = '';
@@ -212,20 +301,30 @@ for (const proj of projects) {
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
         a.className = 'text-sm px-3 py-1.5 rounded-full bg-secondary/15 text-secondary border border-secondary/30 hover:bg-secondary/25 transition-colors';
-        a.textContent = link.label;
+        a.textContent = link.label[lang];
         linksEl.appendChild(a);
       });
     }
 
     if (techsEl) {
       techsEl.innerHTML = '';
-      data.technologies.forEach((tech) => {
+      data.technologies[lang].forEach((tech) => {
         const span = document.createElement('span');
         span.className = 'text-xs px-2 py-1 rounded-full bg-white/10 text-white/80 border border-white/20';
         span.textContent = tech;
         techsEl.appendChild(span);
       });
     }
+  };
+
+  const openProjectModal = (projectId: string) => {
+    const modal = document.querySelector<HTMLElement>('#projectModal');
+    if (!modal) return;
+    const videoEl = modal.querySelector<HTMLIFrameElement>('#projectModalVideo');
+    const data = getProjectsIndex()[projectId];
+    if (videoEl && data) videoEl.src = toEmbedUrl(data.video);
+
+    renderProjectModal(projectId, getCurrentLang());
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
@@ -444,4 +543,3 @@ for (const proj of projects) {
     stop: stopProjects,
   };
 </script>
-

@@ -7,6 +7,7 @@ import { fadeOutFloor, fadeInFloor } from './three/homeLandingEnvironment';
 import { sections } from './sections';
 import { revealActiveSectionTitle, resetActiveSectionTitle } from './textReveal';
 import * as THREE from 'three';
+import type { Lang } from '../i18n/utils';
 
 // Hooks exposed by each section's <script> block. The scene orchestrator
 // calls them when a section is opened/closed so the section can run any
@@ -42,19 +43,14 @@ const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | nu
     // also close the detail view (if it is open) so we never leave it dangling
     // after the user scrolls back up out of the 3D scene
     onReset?.();
+    // Hide titles and reset overlay visibility *instantly* (no tween).
+    // Previously we ran a 0.2s gsap.to(...) on the overlay while titles were
+    // still being drawn by the render loop, which produced a brief flash of
+    // the previous section's title before the fade-out completed.
     landingScene.hideTitles();
-    // reset visibility of the overlay
-    gsap.to(landingScene.overlay, {
-      autoAlpha: 0,
-      pointerEvents: 'none',
-      duration: 0.2,
-      ease: 'none',
-      onComplete: () => {
-        resetCameraToInitialPosition(landingScene.camera);
-        SpaceIntroPlayed = false;
-      },
-    });
-
+    gsap.set(landingScene.overlay, { autoAlpha: 0, pointerEvents: 'none' });
+    resetCameraToInitialPosition(landingScene.camera);
+    SpaceIntroPlayed = false;
   };
   // executed when the user scrolls down and reaches some percentage of the scroll
   function triggerSpaceIntroAnimation() {
@@ -349,11 +345,23 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
     
 
       // Ensure overlay is laid out so anchors can be measured. The overlay
-      // is a 3x3 grid (grid-cols-3 grid-rows-3) so each section's title and
-      // content land in the correct cells and #modelBg sits in row 2 col 3.
+      // is a 3x3 grid (grid-cols-3 grid-rows-3) so each section's wrapper
+      // (display: contents) lays its title, content, #modelBg and
+      // #detail-close out into the right cells when it becomes active.
       gsap.set(detailOverlay, { display: 'grid', opacity: 0, pointerEvents: 'none' });
 
-      const modelAnchor = document.querySelector('#modelBg') as HTMLElement ;
+      // Each section owns its own #modelBg and #detail-close inside a
+      // `display: contents` wrapper. Unhide the active wrapper BEFORE
+      // measuring the model anchor, otherwise the wrapper is `display: none`
+      // and the anchor's bounding rect collapses to zero.
+      const activeSection = landingScene.getActiveSection();
+      if (activeSection) {
+        showActiveDetailView(activeSection.htmlDetailViewSelector);
+      }
+      const detailRoot = activeSection
+        ? document.querySelector<HTMLElement>(activeSection.htmlDetailViewSelector)
+        : null;
+      const modelAnchor = detailRoot?.querySelector<HTMLElement>('#modelBg') ?? null;
 
       
 
@@ -376,7 +384,7 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
        */
       const moveAndOrientGroup = (
         group: Group,
-        anchorEl: HTMLElement,
+        anchorEl: HTMLElement | null,
         opts?: {
           move?: { x?: number; y?: number; z?: number };
           rotate?: { x?: number; y?: number; z?: number };
@@ -476,8 +484,9 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
         rotate:{y: MathUtils.degToRad(-45),x: MathUtils.degToRad(-7)}
       }); // move backdrop to model anchor with some offset
 
-      // Show HTML layout
-      const activeSection = landingScene.getActiveSection();
+      // Show HTML layout (the wrapper was already unhidden above so the
+      // model anchor could be measured; this call is still useful because
+      // it re-asserts the active state in case any other section leaked).
       if (activeSection) {
         showActiveDetailView(activeSection.htmlDetailViewSelector);
       }
@@ -487,8 +496,8 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       // (typing, marquee, ScrollTrigger refresh, ...). We wait a tick to
       // ensure the detail overlay is fully visible.
       tl.call(() => {
-        // Show the close button.
-        const closeBtn = detailOverlay.querySelector<HTMLElement>('#detail-close');
+        // Show the close button (scoped to the active section's wrapper).
+        const closeBtn = detailRoot?.querySelector<HTMLElement>('#detail-close');
         if (closeBtn) closeBtn.classList.remove('hidden');
 
         // Reveal the section's title letter-by-letter.
@@ -522,14 +531,17 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       tl.to(detailOverlay, { opacity: 0, display: 'none', pointerEvents: 'none', duration: 0.3 }, 0);
       hideAllDetailViews();
 
-      // Hide the close button and reset the section's title reveal so the
-      // next open replays the entry animation.
-      const closeBtn = detailOverlay.querySelector<HTMLElement>('#detail-close');
-      if (closeBtn) closeBtn.classList.add('hidden');
-
       // Stop the section's running animations (typing, etc.) and reset the
       // letter reveal state of the previously active section.
       const previousSection = landingScene.getActiveSection();
+      const previousRoot = previousSection
+        ? document.querySelector<HTMLElement>(previousSection.htmlDetailViewSelector)
+        : null;
+
+      // Hide the close button (scoped to the previous section's wrapper) and
+      // reset the section's title reveal so the next open replays the entry.
+      const closeBtn = previousRoot?.querySelector<HTMLElement>('#detail-close');
+      if (closeBtn) closeBtn.classList.add('hidden');
       if (previousSection) {
         const sectionRoot = document.querySelector<HTMLElement>(previousSection.htmlDetailViewSelector);
         resetActiveSectionTitle(sectionRoot);
@@ -575,16 +587,8 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
     }
   };
 
-  // Click handler: when the detail view is open, only close if the click
-  // landed outside of the section's content area. Clicks inside the content
-  // (cards, typing, sliders) bubble up but don't close.
-  const isClickInsideSectionContent = (target: EventTarget | null): boolean => {
-    if (!(target instanceof Node)) return false;
-    const content = (target as Element).closest?.('[data-section-content]');
-    return Boolean(content);
-  };
 
-  const handleOverlayClick = (event: MouseEvent) => {
+  const handleOverlayClick = (_event: MouseEvent) => {
     if (isDetailView) {
       // While in detail view, the three-overlay doesn't receive clicks (the
       // detail overlay is on top). Closing is handled by the detail overlay's
@@ -599,26 +603,14 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
     }
   };
 
-  // Close button: always closes the detail view.
-  const closeButton = detailOverlay.querySelector<HTMLElement>('#detail-close');
-  if (closeButton) {
+  // Close buttons (one per section). Only the active section's button is
+  // visible at any time, so attaching the same handler to all of them is
+  // safe — clicking any of them just closes the detail view.
+  detailOverlay.querySelectorAll<HTMLElement>('#detail-close').forEach((closeButton) => {
     closeButton.addEventListener('click', (event) => {
       event.stopPropagation();
       handleToggle("close");
     });
-  }
-
-  // Click on the detail overlay: close only if the click landed on the
-  // overlay itself (not on a section's content).
-  detailOverlay.addEventListener('click', (event) => {
-    if (isClickInsideSectionContent(event.target)) {
-      return;
-    }
-    // Ignore clicks on the close button (already handled by its own listener).
-    if (event.target instanceof Element && event.target.closest('#detail-close')) {
-      return;
-    }
-    handleToggle("close");
   });
 
   overlay.addEventListener('click', handleOverlayClick);
@@ -628,13 +620,13 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
   };
 }
 
-export const initializeHomeLandingScene = () => {
+export const initializeHomeLandingScene = (lang: Lang = 'en') => {
   window.scrollTo(0, 0);
 
   const heroMask = document.querySelector('#hero-mask');
   const overlay = document.querySelector('#three-overlay') as HTMLElement | null;
 
-  const landingScene = createHomeLandingThreeScene(overlay);
+  const landingScene = createHomeLandingThreeScene(overlay, lang);
 
   if (!heroMask) {
     return;

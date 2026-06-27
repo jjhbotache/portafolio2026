@@ -6,37 +6,79 @@
 // ScrollTrigger with pin + scrub) so they appear to move from right to left
 // as the user scrolls down, stacking in the viewport.
 import { getCollection } from 'astro:content';
+import { marked } from 'marked';
+import { resolveBilingual, t, type Lang } from '../../i18n/utils';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props as Props;
 
 const experiences = await getCollection('experiences');
 
-const monthsEs = [
-  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
-];
-const monthsEn = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
+// Short month names come from the i18n dictionary so they switch with the
+// URL locale without a hardcoded `monthsEs` / `monthsEn` pair.
+const noImagesLabel = t(lang, 'experience.noImages');
 
-// Lookup tables for the current locale (used to format the period string).
-const monthsByLang = {
-  es: monthsEs,
-  en: monthsEn,
-} as const;
+// Convert every experience into a fully-resolved, pre-rendered payload so
+// the client doesn't need to re-resolve bilingual fields or re-parse the
+// markdown body on every open.
+interface ResolvedExperience {
+  id: string;
+  title: string;
+  period: string;
+  description: string;
+  contentHtml: string;
+  technologies: string[];
+  imgs: string[];
+  periodByLang: { es: string; en: string };
+  enterprises: { name: string; logo: string; url: string }[];
+}
+
+const buildPeriod = (exp: typeof experiences[number], monthList: string[]) =>
+  `${monthList[exp.data.start.month - 1]} ${exp.data.start.year} — ${monthList[exp.data.end.month - 1]} ${exp.data.end.year}`;
+
+const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
+  const periodEs = buildPeriod(exp, t('es', 'months.short') as unknown as string[]);
+  const periodEn = buildPeriod(exp, t('en', 'months.short') as unknown as string[]);
+
+  const title = resolveBilingual(exp.data.title, lang) ?? '';
+  const description = resolveBilingual(exp.data.description, lang) ?? '';
+  const contentMd = resolveBilingual(exp.data.content, lang) ?? '';
+  const technologies = (resolveBilingual(exp.data.technologies, lang) ?? []) as string[];
+  const enterprises = exp.data.enterprises.map((ent) => ({
+    name: resolveBilingual(ent.name, lang) ?? '',
+    logo: ent.logo,
+    url: ent.url,
+  }));
+
+  return {
+    id: exp.id,
+    title,
+    period: lang === 'es' ? periodEs : periodEn,
+    description,
+    contentHtml: marked.parse(contentMd) as string,
+    technologies,
+    imgs: exp.data.imgs,
+    periodByLang: { es: periodEs, en: periodEn },
+    enterprises,
+  };
+});
 ---
 
+<!-- Section wrapper: contains the title, content, 3D model anchor and close
+     button. Uses `display: contents` so the children participate in the
+     parent (#detail-overlay) grid when the section is active. -->
+<div
+  id="experienceDetailRoot"
+  class="contents hidden"
+  data-section-detail
+  data-section-id="experience"
+>
 <h2
-  class="col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto"
+  class:list={["col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto", lang === 'en' ? '' : 'hidden']}
   data-lang="es"
   data-section-id="experience"
   data-section-detail
->Experiencia</h2>
-<h2
-  class="col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto hidden"
-  data-lang="en"
-  data-section-id="experience"
-  data-section-detail
->Experience</h2>
+>{t('en', 'sections.experience.title')}</h2>
 
 <div
   id="experienceDetailedView"
@@ -49,88 +91,92 @@ const monthsByLang = {
     class="experience-content max-h-full h-full sticky top-0"
   >
     <div class="experience-track relative w-full h-[90%] overflow-hidden ">
-      {experiences.map((exp) => {
-        const periodEs = `${monthsEs[exp.data.start.month - 1]} ${exp.data.start.year} — ${monthsEs[exp.data.end.month - 1]} ${exp.data.end.year}`;
-        const periodEn = `${monthsEn[exp.data.start.month - 1]} ${exp.data.start.year} — ${monthsEn[exp.data.end.month - 1]} ${exp.data.end.year}`;
-        return (
-          <article
-            class="experience-card absolute inset-y-0 left-20 w-[70vw] md:w-[60vw] max-w-3xl rounded-2xl border border-white/15 bg-tertiary backdrop-blur-md p-6 flex flex-col md:flex-row gap-6 shadow-sm"
-            data-card-id={exp.id}
-            data-period-es={periodEs}
-            data-period-en={periodEn}
-          >
-            <div class="md:w-2/5 flex flex-col gap-3 overflow-y-auto pr-2">
-              <h3 class="text-2xl font-bold leading-tight">{exp.data.title}</h3>
-              <div class="flex flex-wrap items-center gap-3">
-                {exp.data.enterprises.map((ent) => (
-                  <a
-                    href={ent.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="flex items-center gap-2 text-sm text-white/80 hover:text-secondary transition-colors"
-                  >
-                    <img
-                      src={ent.logo}
-                      alt={ent.name}
-                      class="w-6 h-6 rounded-sm bg-white/10"
-                      loading="lazy"
-                    />
-                    <span>{ent.name}</span>
-                  </a>
-                ))}
-              </div>
-              <p
-                class="text-sm text-white/60 italic"
-                data-period-display
-              >{periodEs}</p>
-              <p class="text-sm text-white/80 leading-relaxed">
-                {exp.data.description}
-              </p>
-              <div class="flex flex-wrap gap-1.5">
-                {exp.data.technologies.map((tech) => (
-                  <span class="text-xs px-2 py-1 rounded-full bg-secondary/15 text-secondary border border-secondary/30">
-                    {tech}
-                  </span>
-                ))}
-              </div>
-              <div class="mt-2 text-sm text-white/70 leading-relaxed prose prose-invert max-w-none">
-                <p>{exp.data.content}</p>
-              </div>
-            </div>
-            <div class="md:w-3/5 relative rounded-xl overflow-hidden bg-black/40 min-h-65">
-              {exp.data.imgs.length > 0 ? (
-                <div
-                  class="swiper h-full"
-                  data-swiper-id={exp.id}
+      {resolvedExperiences.map((exp) => (
+        <article
+          class="experience-card absolute inset-y-0 left-20 w-[70vw] md:w-[60vw] max-w-3xl rounded-2xl border border-white/15 bg-tertiary backdrop-blur-md p-6 flex flex-col md:flex-row gap-6 shadow-sm"
+          data-card-id={exp.id}
+          data-period-es={exp.periodByLang.es}
+          data-period-en={exp.periodByLang.en}
+        >
+          <div class="md:w-2/5 flex flex-col gap-3 overflow-y-auto pr-2">
+            <h3 class="text-2xl font-bold leading-tight">{exp.title}</h3>
+            <div class="flex flex-wrap items-center gap-3">
+              {exp.enterprises.map((ent) => (
+                <a
+                  href={ent.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex items-center gap-2 text-sm text-white/80 hover:text-secondary transition-colors"
                 >
-                  <div class="swiper-wrapper h-full">
-                    {exp.data.imgs.map((src) => (
-                      <div class="swiper-slide">
-                        <img
-                          src={src}
-                          alt={exp.data.title}
-                          class="w-full h-full object-cover"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div class="swiper-pagination"></div>
-                </div>
-              ) : (
-                <div class="w-full h-full flex items-center justify-center text-white/40 text-sm">
-                  Sin imágenes
-                </div>
-              )}
+                  <img
+                    src={ent.logo}
+                    alt={ent.name}
+                    class="w-6 h-6 rounded-sm bg-white/10"
+                    loading="lazy"
+                  />
+                  <span>{ent.name}</span>
+                </a>
+              ))}
             </div>
-          </article>
-        );
-      })}
+            <p
+              class="text-sm text-white/60 italic"
+              data-period-display
+            >{exp.period}</p>
+            <p class="text-sm text-white/80 leading-relaxed">
+              {exp.description}
+            </p>
+            <div class="flex flex-wrap gap-1.5">
+              {exp.technologies.map((tech) => (
+                <span class="text-xs px-2 py-1 rounded-full bg-secondary/15 text-secondary border border-secondary/30">
+                  {tech}
+                </span>
+              ))}
+            </div>
+            <div class="mt-2 text-sm text-white/70 leading-relaxed prose prose-invert max-w-none" set:html={exp.contentHtml} />
+          </div>
+          <div class="md:w-3/5 relative rounded-xl overflow-hidden bg-black/40 min-h-65">
+            {exp.imgs.length > 0 ? (
+              <div
+                class="swiper h-full"
+                data-swiper-id={exp.id}
+              >
+                <div class="swiper-wrapper h-full">
+                  {exp.imgs.map((src) => (
+                    <div class="swiper-slide">
+                      <img
+                        src={src}
+                        alt={exp.title}
+                        class="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div class="swiper-pagination"></div>
+              </div>
+            ) : (
+              <div class="w-full h-full flex items-center justify-center text-white/40 text-sm">
+                {noImagesLabel}
+              </div>
+            )}
+          </div>
+        </article>
+      ))}
     </div>
     <!-- add space to make it scrollable -->
     <div id="experienceSpacer"></div>
   </div>
+  <!-- 3D model anchor positioned within this section -->
+  <div id="modelBg" class="fixed top-1/2 right-0 w-[33vw] h-[33vh] transform -translate-y-1/2 pointer-events-none z-0"></div>
+  <!-- Close button for this section's detail view -->
+  <button
+    id="detail-close"
+    type="button"
+    class="hidden fixed top-4 left-4 md:top-6 md:left-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white text-2xl flex items-center justify-center transition-colors z-55"
+    aria-label={t(lang, 'ui.closeDetailAria')}
+    data-i18n-attr={`aria-label:ui.closeDetailAria`}
+  >&lsaquo;</button>
 </div>
 
 <script>
@@ -206,7 +252,7 @@ const monthsByLang = {
 
     // Initial state: card[0] visible at the front, others off-screen to the right.
     // DOM order sets z-index so the newest card is always rendered on top.
-    
+
     // cards.slice(1).forEach((card, i) => {
     //   gsap.set(card, { x:  10000 });
     // });
@@ -354,4 +400,3 @@ const monthsByLang = {
     stop: stopExperience,
   };
 </script>
-

@@ -2,23 +2,41 @@ import { defineCollection} from "astro:content";
 import { z } from 'astro/zod';
 import { glob as file } from 'astro/loaders';
 
+// A field that can be either a plain string or a bilingual `{ en, es }`
+// object. Resolved at render time with `resolveBilingual(value, lang)`.
+const bilingualString = z.union([
+  z.string(),
+  z.object({
+    en: z.string(),
+    es: z.string(),
+  }),
+]);
+
+const bilingualStringArray = z.union([
+  z.array(z.string()),
+  z.object({
+    en: z.array(z.string()),
+    es: z.array(z.string()),
+  }),
+]);
+
 // Experiences: each entry represents a job / professional engagement.
 // `content` is the full markdown body of the entry (rendered below the meta).
 // `imgs` are the screenshots that go inside the card's vertical Swiper.
 const experiences = defineCollection({
     loader: file({ base: './src/content/experiences', pattern: '**/*.{md,mdx}' }),
     schema: z.object({
-        title: z.string(),
+        title: bilingualString,
         enterprises: z.array(
         z.object({
-            name: z.string(),
-            logo: z.string().url(),
-            url: z.string().url(),
+          name: bilingualString,
+          logo: z.string().url(),
+          url: z.string().url(),
         })
         ),
         imgs: z.array(z.string().url()),
-        technologies: z.array(z.string()),
-        content: z.string(),
+        technologies: bilingualStringArray,
+        content: bilingualString,
         start: z.object({
         month: z.number().int().min(1).max(12),
         year: z.string(),
@@ -27,7 +45,7 @@ const experiences = defineCollection({
       month: z.number().int().min(1).max(12),
       year: z.string(),
     }),
-    description: z.string(),
+    description: bilingualString,
   }),
 });
 
@@ -37,16 +55,17 @@ const experiences = defineCollection({
 const projects = defineCollection({
     loader: file({ base: './src/content/projects', pattern: '**/*.{md,mdx}' }),
   schema: z.object({
-    title: z.string(),
-    technologies: z.array(z.string()),
+    title: bilingualString,
+    technologies: bilingualStringArray,
     video: z.string().url(),
     links: z.array(
       z.object({
-        label: z.string(),
+        label: bilingualString,
         url: z.string().url(),
       })
     ),
-    description: z.string(),
+    description: bilingualString,
+    content: bilingualString,
   }),
 });
 

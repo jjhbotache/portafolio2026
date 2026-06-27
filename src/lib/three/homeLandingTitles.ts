@@ -3,15 +3,17 @@ import gsap from 'gsap';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { materialFactory } from './materialFactory';
-import { sections, type SectionConfig } from '../sections';
+import { sections, resolveSectionModelPath, type SectionConfig } from '../sections';
+import type { Lang } from '../../i18n/utils';
 import type { TitleBackgroundController } from './titlesBackgrounds/types';
 
 // All section data (model path, background factory, detail view selector, ...)
 // is centralized in `src/lib/sections/index.ts`. The order of `sections` defines
 // the order of the titles around the disk.
-const TITLE_SEQUENCE: readonly string[] = sections.map((s) => s.titleModelPath);
+const buildTitleSequence = (lang: Lang): readonly string[] =>
+  sections.map((s) => resolveSectionModelPath(s, lang));
 
-const ANGLE_PER_TITLE = (Math.PI * 2) / TITLE_SEQUENCE.length;
+const ANGLE_PER_TITLE = (Math.PI * 2) / sections.length;
 
 const normalizeAngle = (angle: number) => {
   const twoPi = Math.PI * 2;
@@ -88,7 +90,11 @@ const loadTitleModel = (
   return title;
 };
 
-export const createLandingTitles = (scene: THREE.Scene, camera: THREE.PerspectiveCamera) => {
+export const createLandingTitles = (
+  scene: THREE.Scene,
+  camera: THREE.PerspectiveCamera,
+  lang: Lang = 'en',
+) => {
   const stlLoader = new STLLoader();
   const gltfLoader = new GLTFLoader();
   // Each section declares its own background factory. We instantiate them all
@@ -109,7 +115,7 @@ export const createLandingTitles = (scene: THREE.Scene, camera: THREE.Perspectiv
 
   scene.add(titlesRoot);
 
-  const titles = TITLE_SEQUENCE.map((path) => loadTitleModel(stlLoader, path, titlesRoot));
+  const titles = buildTitleSequence(lang).map((path) => loadTitleModel(stlLoader, path, titlesRoot));
 
   let activeIndex = 0;
   let titlesVisible = false;

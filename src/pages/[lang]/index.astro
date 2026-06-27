@@ -1,20 +1,36 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import Layout from '../../layouts/Layout.astro';
 import { Icon } from 'astro-icon/components'
-import ExperienceDetail from '../components/sections/ExperienceDetail.astro';
-import AboutMeDetail from '../components/sections/AboutMeDetail.astro';
-import ContactDetail from '../components/sections/ContactDetail.astro';
-import ProjectsDetail from '../components/sections/ProjectsDetail.astro';
+import ExperienceDetail from '../../components/sections/ExperienceDetail.astro';
+import AboutMeDetail from '../../components/sections/AboutMeDetail.astro';
+import ContactDetail from '../../components/sections/ContactDetail.astro';
+import ProjectsDetail from '../../components/sections/ProjectsDetail.astro';
+import LanguageToggle from '../../components/LanguageToggle.astro';
+import { isLang, t, type Lang } from '../../i18n/utils';
+
+const rawLang = Astro.params.lang;
+const lang: Lang = isLang(rawLang) ? rawLang : 'en';
+
+const titleByLang: Record<Lang, string> = {
+  en: 'Juan José Huertas — Portfolio',
+  es: 'Juan José Huertas — Portafolio',
+};
+const descriptionByLang: Record<Lang, string> = {
+  en: 'Interactive portfolio built with Astro, Three.js and GSAP.',
+  es: 'Portafolio interactivo construido con Astro, Three.js y GSAP.',
+};
 ---
-<Layout title="Landing">
+<Layout title={titleByLang[lang]} description={descriptionByLang[lang]} lang={lang}>
+  <LanguageToggle />
+
   <div
     id="hero-mask"
     class="masked h-full w-full"
   >
     <div id="content" class="relative flex items-center justify-center gap-10 h-screen bg-linear-to-br from-gray-900 to-gray-950">
-      
+
       <img
-        src="me.png"
+        src="/me.png"
         alt="me"
         loading="lazy"
         decoding="async"
@@ -24,11 +40,11 @@ import ProjectsDetail from '../components/sections/ProjectsDetail.astro';
       <h1 class=" max-w-150 text-[5rem] font-bold bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
         juan
       </h1>
-      
+
       <div class=" fixed bottom-[15%] left-[50%] transform -translate-x-1/2 h-40 w-40 flex items-center justify-center ">
         <Icon name="downArrow" class="w-10 h-10 text-secondary animate-bounce" />
-      </div>  
-    
+      </div>
+
     </div>
   </div>
     <div id="three-overlay" aria-hidden="true">
@@ -43,28 +59,19 @@ import ProjectsDetail from '../components/sections/ProjectsDetail.astro';
         </div>
       </div>
     </div>
-    
+
     <!-- a 3*3 grid -->
     <div id="detail-overlay" class="fixed inset-0 z-50 opacity-0 overflow-y-auto pointer-events-none hidden grid-cols-3 grid-rows-3  transition-opacity duration-300">
-      <ExperienceDetail />
-      <AboutMeDetail />
-      <ContactDetail />
-      <ProjectsDetail />
-      <!-- position the 3D model in the 2d -->
-      <div id="modelBg" class="fixed top-1/2 right-0 w-[33vw] h-[33vh] transform -translate-y-1/2 pointer-events-none z-0"></div>
-      <!-- Close button: always visible when the detail overlay is open. -->
-      <button
-        id="detail-close"
-        type="button"
-        class="hidden fixed top-4 left-4 md:top-6 md:left-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white text-2xl flex items-center justify-center transition-colors z-55"
-        aria-label="Cerrar vista detallada"
-      >&lsaquo;</button>
+      <ExperienceDetail lang={lang} />
+      <AboutMeDetail lang={lang} />
+      <ContactDetail lang={lang} />
+      <ProjectsDetail lang={lang} />
     </div>
-    
+
   <!-- div used for trigger the onComplete event of the animation -->
   <div class="h-px"></div>
   <!-- link used for redirect with transitions -->
-  <a href="/menu" id="menu-link" />
+  <a href={`/${lang}/menu`} id="menu-link" />
 </Layout>
 
 <style>
@@ -131,7 +138,12 @@ import ProjectsDetail from '../components/sections/ProjectsDetail.astro';
 </style>
 
 <script>
-  import { initializeHomeLandingScene } from '../lib/homeLandingScene';
+  import { initializeHomeLandingScene } from '../../lib/homeLandingScene';
 
-  initializeHomeLandingScene();
+  // Read the locale from the URL on the client; the Astro page already has
+  // it but the scene runs entirely in the browser and needs the same value.
+  const seg = window.location.pathname.split('/').filter(Boolean)[0];
+  const lang = seg === 'es' || seg === 'en' ? seg : 'en';
+
+  initializeHomeLandingScene(lang as 'en' | 'es');
 </script>

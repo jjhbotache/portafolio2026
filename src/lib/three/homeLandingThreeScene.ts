@@ -9,6 +9,7 @@ import { createLandingTitles } from './homeLandingTitles';
 import { configureMaterialAnisotropy, disposeAllTextures } from './materialFactory';
 import type { TitleBackgroundController } from './titlesBackgrounds/types';
 import type { SectionConfig } from '../sections';
+import type { Lang } from '../../i18n/utils';
 
 export type LandingScene = {
   overlay: HTMLElement;
@@ -218,7 +219,10 @@ const createGradientBackground = () => {
   return new THREE.CanvasTexture(canvas);
 };
 
-export const createHomeLandingThreeScene = (overlay: HTMLElement | null): LandingScene | null => {
+export const createHomeLandingThreeScene = (
+  overlay: HTMLElement | null,
+  lang: Lang = 'en',
+): LandingScene | null => {
   if (!overlay) {
     return null;
   }
@@ -271,7 +275,7 @@ export const createHomeLandingThreeScene = (overlay: HTMLElement | null): Landin
   const { starField, animate, dispose: disposeStarField } = createLandingStarField();
   scene.add(starField);
 
-  const titles = createLandingTitles(scene, camera);
+  const titles = createLandingTitles(scene, camera, lang);
 
   addLights(scene);
   const onResizeRef: { current: (() => void) | null } = { current: null };

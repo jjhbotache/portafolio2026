@@ -12,6 +12,14 @@ export default defineConfig({
     mode: 'standalone'
   }),
 
+  i18n: {
+    defaultLocale: 'en',
+    locales: ['en', 'es'],
+    routing: {
+      prefixDefaultLocale: true,
+    },
+  },
+
   // Prefetch internal links as soon as they enter the viewport so client-side
   // navigation feels instant without preloading everything upfront.
   prefetch: {
