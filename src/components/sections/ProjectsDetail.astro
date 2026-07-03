@@ -99,17 +99,11 @@ for (const proj of projects) {
   data-section-id="projects"
 >
 <h2
-  class:list={["col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto", lang === 'es' ? '' : 'hidden']}
-  data-lang="es"
+  class="col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto"
+  data-lang={lang}
   data-section-id="projects"
   data-section-detail
->{t('es', 'sections.projects.title')}</h2>
-<h2
-  class:list={["col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto", lang === 'en' ? '' : 'hidden']}
-  data-lang="en"
-  data-section-id="projects"
-  data-section-detail
->{t('en', 'sections.projects.title')}</h2>
+>{t(lang, 'sections.projects.title')}</h2>
 
 <div
   id="projectsDetailedView"
@@ -404,30 +398,30 @@ for (const proj of projects) {
       const segmentTime = (k - 1) * STEP_DURATION;
       const dir = slideDirections[(k - 1) % slideDirections.length];
 
-      for (let i = 0; i < k; i++) {
-        timeline.to(
-          cards[i],
-          { y: `-=${STACK_OFFSET_PX}`, duration: STEP_DURATION },
-          segmentTime,
-        );
-      }
+      // for (let i = 0; i < k; i++) {
+      //   timeline.to(
+      //     cards[i],
+      //     { y: `-=${STACK_OFFSET_PX}`, duration: STEP_DURATION },
+      //     segmentTime,
+      //   );
+      // }
 
       timeline.fromTo(
         cards[k],
         { x: dir.x, y: dir.y },
-        { x: 0, y: 0, duration: STEP_DURATION },
+        { x: 0, y: 0, duration: STEP_DURATION ,ease: 'power4.out'},
         segmentTime,
       );
     }
 
     // One viewport of scroll per card transition.
-    const getScrollDistance = () => totalDuration * window.innerHeight;
+    const getScrollDistance = 5000;
 
     const st = ScrollTrigger.create({
       scroller: wrapper,
       trigger: content,
       start: 'top top',
-      end: () => `+=${getScrollDistance()}`,
+      end: () => `+=${getScrollDistance}`,
       scrub: 0.6,
       animation: timeline,
     });
@@ -436,7 +430,7 @@ for (const proj of projects) {
     // to drive the animation end-to-end. Kept in sync with `end` via refresh.
     const spacer = document.querySelector<HTMLElement>('#projectsSpacer');
     if (spacer) {
-      spacer.style.height = `${getScrollDistance()}px`;
+      spacer.style.height = `${getScrollDistance}px`;
     }
 
     return {

@@ -44,10 +44,15 @@ const loadTitleModel = (
   loader: STLLoader,
   path: string,
   root: THREE.Group,
+  backdropRoot: THREE.Group,
 ): LandingTitle => {
   const titleGroup = new THREE.Group();
   const backdropGroup = new THREE.Group();
   titleGroup.add(backdropGroup);
+  // Drop the per-title visibility root inside `backdropGroup` so traversing
+  // the title still visits the backdrop meshes, but flipping
+  // `backdropRoot.visible` only affects that one section's content.
+  backdropGroup.add(backdropRoot);
 
   const title: LandingTitle = {
     group: titleGroup,
@@ -115,7 +120,15 @@ export const createLandingTitles = (
 
   scene.add(titlesRoot);
 
-  const titles = buildTitleSequence(lang).map((path) => loadTitleModel(stlLoader, path, titlesRoot));
+  // Parallel array of root groups used to control per-backdrop visibility.
+  // Each entry lives under the corresponding title's `backdropGroup` and
+  // owns the meshes produced by that background's `onLoad`. We toggle
+  // `visible` on these roots (instead of relying on opacity alone) so the
+  // renderer skips hidden backdrops entirely once a fade-out completes.
+  const backdropRoots: THREE.Group[] = buildTitleSequence(lang).map(() => new THREE.Group());
+  const titles = buildTitleSequence(lang).map((path, index) =>
+    loadTitleModel(stlLoader, path, titlesRoot, backdropRoots[index]),
+  );
 
   let activeIndex = 0;
   let titlesVisible = false;
@@ -184,9 +197,23 @@ export const createLandingTitles = (
           sourceModels,
           sourceAnimations: animationsByModel,
           backdropGroup: title.backdropGroup,
+          backdropRoot: backdropRoots[index],
           titleSize: title.size,
         });
         title.materials.push(...materials);
+
+        // Wrap the background's `onHidden` so that flipping the visibility
+        // root off is the last step of the hide sequence. We chain in any
+        // user-supplied `onHidden` first (e.g. tween-complete hooks), then
+        // set `visible = false` so the renderer skips the section entirely.
+        const previousOnHidden = backgrounds[index].onHidden;
+        const rootForThisIndex = backdropRoots[index];
+        backgrounds[index].onHidden = () => {
+          previousOnHidden?.();
+          if (rootForThisIndex) {
+            rootForThisIndex.visible = false;
+          }
+        };
       });
 
       backdropsLoaded = true;
@@ -244,8 +271,16 @@ export const createLandingTitles = (
       return;
     }
 
-    backgrounds[activeIndex].onHide();
-    backgrounds[nextIndex].onShow();
+    // Make the next backdrop visible *before* its fade-in begins so both
+    // old and new sections render for the duration of the cross-fade. The
+    // previous root flips to `visible = false` only when the previous
+    // background's `onHidden` callback fires (after any fade-out tween),
+    // wired up in `loadBackdrops`.
+    const oldIndex = activeIndex;
+    const nextBackdropRoot = backdropRoots[nextIndex];
+    if (nextBackdropRoot) {
+      nextBackdropRoot.visible = true;
+    }
 
     activeTransition?.kill();
     activeTransition = gsap.timeline({
@@ -268,7 +303,17 @@ export const createLandingTitles = (
       opacity: 1,
       duration: .4,
       ease: 'sine.in',
+      onStart: () => {
+        // Kick off the new section's fade-in alongside the still-running
+        // fade-out of the previous section.
+        backgrounds[nextIndex].onShow();
+      },
     });
+
+    // Kick off the previous section's hide sequence. The wrapped
+    // `onHidden` (set up in `loadBackdrops`) will flip its root to
+    // `visible = false` once any internal tween completes.
+    backgrounds[oldIndex].onHide();
 
     activeIndex = nextIndex;
   };
@@ -377,6 +422,7 @@ export const createLandingTitles = (
     hide,
     dispose,
     setPaused,
+    areTitlesVisible: () => titlesVisible,
     getActiveTitleGroup: () => titles[activeIndex]?.group,
     getActiveBackdropGroup: () => titles[activeIndex]?.backdropGroup,
     getActiveSectionIndex: () => activeIndex,

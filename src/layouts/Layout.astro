@@ -46,22 +46,3 @@ const safeLang: Lang = isLang(lang) ? lang : 'en';
 
   document.addEventListener('astro:page-load', sync);
 </script>
-
-<script is:inline>
-  // Inline so it runs before hydration: sync the document language with
-  // the URL on the very first paint, no waiting for the module above.
-  (function () {
-    var seg = window.location.pathname.split('/').filter(Boolean)[0];
-    var lang = seg === 'es' || seg === 'en' ? seg : 'en';
-    document.documentElement.lang = lang;
-    var nodes = document.querySelectorAll('[data-lang]');
-    for (var i = 0; i < nodes.length; i++) {
-      var el = nodes[i];
-      if (el.dataset && el.dataset.lang !== lang) {
-        el.classList.add('hidden');
-      } else if (el.dataset && el.dataset.lang === lang) {
-        el.classList.remove('hidden');
-      }
-    }
-  })();
-</script>

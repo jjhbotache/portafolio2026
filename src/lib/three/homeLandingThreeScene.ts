@@ -4,7 +4,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { loadLandingDisk, disposeLandingDisk } from './homeLandingDisk';
-import { createLandingStarField, loadLandingEnvironment, disposeLandingEnvironment } from './homeLandingEnvironment';
+import { createLandingStarField, disposeLandingEnvironment } from './homeLandingEnvironment';
 import { createLandingTitles } from './homeLandingTitles';
 import { configureMaterialAnisotropy, disposeAllTextures } from './materialFactory';
 import type { TitleBackgroundController } from './titlesBackgrounds/types';
@@ -19,6 +19,7 @@ export type LandingScene = {
   scene: THREE.Scene;
   showTitles: () => void;
   hideTitles: () => void;
+  titlesAreVisible: () => boolean;
   titles: ReturnType<typeof createLandingTitles>;
   pauseOrbit: () => void;
   getActiveSectionIndex: () => number;
@@ -128,10 +129,13 @@ const setupResize = (
   return onResize;
 };
 
-// Adaptive frame throttling: start at 20 FPS floor, raise to 60 FPS if the
-// device has headroom (frame budget is well under the per-frame target).
-const TARGET_FPS_FLOOR = 20;
+// Adaptive frame throttling: start at 30 FPS floor, raise to 60 FPS in
+// small +2 steps if the device has headroom. A bigger step causes the loop
+// to skip over the 45-55 FPS zone on mid-range hardware, leaving the user
+// with an unnecessarily choppy experience.
+const TARGET_FPS_FLOOR = 30;
 const TARGET_FPS_CEILING = 60;
+const TARGET_FPS_STEP = 1;
 const HEADROOM_FACTOR = 0.6;
 const FRAME_BUDGET_FOR_FLOOR = 1000 / TARGET_FPS_FLOOR;
 let adaptiveTargetFps = TARGET_FPS_FLOOR;
@@ -174,7 +178,7 @@ const startRenderLoop = (
       if (measuredFrameMs < FRAME_BUDGET_FOR_FLOOR * HEADROOM_FACTOR) {
         consecutiveFastFrames += 1;
         if (consecutiveFastFrames >= 30 && adaptiveTargetFps < TARGET_FPS_CEILING) {
-          adaptiveTargetFps = Math.min(TARGET_FPS_CEILING, adaptiveTargetFps + 5);
+          adaptiveTargetFps = Math.min(TARGET_FPS_CEILING, adaptiveTargetFps + TARGET_FPS_STEP);
           consecutiveFastFrames = 0;
         }
       } else {
@@ -226,7 +230,7 @@ export const createHomeLandingThreeScene = (
   if (!overlay) {
     return null;
   }
-
+  
   const scene = new THREE.Scene();
   const backgroundTexture = createGradientBackground();
   if (backgroundTexture) {
@@ -238,7 +242,7 @@ export const createHomeLandingThreeScene = (
 
   // alpha: false because the background is opaque, saving a composite per frame.
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, .45));
   renderer.setSize(window.innerWidth, window.innerHeight);
   configureMaterialAnisotropy(renderer);
   overlay.appendChild(renderer.domElement);
@@ -247,7 +251,7 @@ export const createHomeLandingThreeScene = (
   composer.addPass(new RenderPass(scene, camera));
 
   const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    new THREE.Vector2(window.innerWidth*0.000000000000000000001, window.innerHeight*0.000000000000000000001),
     0.015,
     0.1,
     0.4,
@@ -270,7 +274,8 @@ export const createHomeLandingThreeScene = (
   scene.add(diskRoot);
 
   loadLandingDisk(diskRoot);
-  loadLandingEnvironment(scene);
+  // Note: loadLandingEnvironment is invoked from buildLandingTimeline so the
+  // STL preloads can be kicked off the moment the landing timeline starts.
 
   const { starField, animate, dispose: disposeStarField } = createLandingStarField();
   scene.add(starField);
@@ -283,7 +288,13 @@ export const createHomeLandingThreeScene = (
 
   const { handleVisibilityChange } = startRenderLoop(controls, composer, onResizeRef, (elapsedTime) => {
     animate(elapsedTime);
-    titles.updateFromCamera(elapsedTime);
+    // Titles' `updateFromCamera` does matrix / slerp work and triggers a
+    // backdrop `update`, none of which needs to run while titles are hidden
+    // (intro animation, scrolled back up, ...). Gate it on the visibility
+    // flag owned by the titles module.
+    if (titles.areTitlesVisible()) {
+      titles.updateFromCamera(elapsedTime);
+    }
   });
 
   // Dispose all GPU/CPU resources owned by the landing scene.
@@ -334,6 +345,7 @@ export const createHomeLandingThreeScene = (
     titles,
     showTitles: titles.show,
     hideTitles: titles.hide,
+    titlesAreVisible: titles.areTitlesVisible,
     pauseOrbit,
     getActiveSectionIndex: titles.getActiveSectionIndex,
     getActiveSection: titles.getActiveSection,

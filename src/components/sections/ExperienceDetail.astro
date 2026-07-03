@@ -69,16 +69,16 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
      parent (#detail-overlay) grid when the section is active. -->
 <div
   id="experienceDetailRoot"
-  class="contents hidden"
+  class="contents hidden "
   data-section-detail
   data-section-id="experience"
 >
 <h2
-  class:list={["col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto", lang === 'en' ? '' : 'hidden']}
-  data-lang="es"
+  class="col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto"
+  data-lang={lang}
   data-section-id="experience"
   data-section-detail
->{t('en', 'sections.experience.title')}</h2>
+>{t(lang, 'sections.experience.title')}</h2>
 
 <div
   id="experienceDetailedView"
@@ -90,10 +90,10 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
   <div
     class="experience-content max-h-full h-full sticky top-0"
   >
-    <div class="experience-track relative w-full h-[90%] overflow-hidden ">
+    <div class="experience-track relative w-full h-full overflow-hidden ">
       {resolvedExperiences.map((exp) => (
         <article
-          class="experience-card absolute inset-y-0 left-20 w-[70vw] md:w-[60vw] max-w-3xl rounded-2xl border border-white/15 bg-tertiary backdrop-blur-md p-6 flex flex-col md:flex-row gap-6 shadow-sm"
+          class="experience-card absolute inset-y-0 left-20 h-[90%]  w-[70vw] md:w-[60vw] max-w-3xl rounded-2xl border border-white/15 bg-tertiary backdrop-blur-md p-6 flex flex-col md:flex-row gap-6 shadow-lg shadow-black/30"
           data-card-id={exp.id}
           data-period-es={exp.periodByLang.es}
           data-period-en={exp.periodByLang.en}
@@ -276,7 +276,12 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
       for (let i = 0; i < k; i++) {
         timeline.to(
           cards[i],
-          { x: `-=${STACK_OFFSET_PX}`, duration: STEP_DURATION },
+          // also delete shadow
+          { 
+            x: `-=${STACK_OFFSET_PX}`,
+            y: `-=${STACK_OFFSET_PX / 2}`,
+            duration: STEP_DURATION
+          },
           segmentTime,
         );
       }

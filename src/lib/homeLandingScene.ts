@@ -3,11 +3,22 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { createHomeLandingThreeScene, resetCameraToInitialPosition, type LandingScene } from './three/homeLandingThreeScene';
 import { CatmullRomCurve3, MathUtils, Vector3, Camera, Group } from 'three';
 import { fadeOutDisk, fadeInDisk } from './three/homeLandingDisk';
-import { fadeOutFloor, fadeInFloor } from './three/homeLandingEnvironment';
+import { fadeOutFloor, fadeInFloor, preloadLandingEnvironment, loadLandingEnvironment } from './three/homeLandingEnvironment';
 import { sections } from './sections';
 import { revealActiveSectionTitle, resetActiveSectionTitle } from './textReveal';
+import { detectGpuCapabilities  } from './gpuCapabilities';
 import * as THREE from 'three';
 import type { Lang } from '../i18n/utils';
+
+// Detect GPU capability once per page load. The score decides between
+  // the heavy (masked + pinned) entrance timeline and a lightweight
+  // alternative that skips the mask and the ScrollTrigger scrub.
+  const gpu = detectGpuCapabilities();
+  console.info('[GPU]', {
+    tier: gpu.tier,
+    score: gpu.score,
+    renderer: gpu.signals.renderer,
+  });
 
 // Hooks exposed by each section's <script> block. The scene orchestrator
 // calls them when a section is opened/closed so the section can run any
@@ -31,11 +42,37 @@ const getSectionHooks = (sectionId: string): SectionHooks => {
   return w[key] ?? {};
 };
 
+// Tracks whether the space intro camera flythrough is currently playing.
+// While it is true, the detail view cannot be opened from the overlay
+// (the titles are hidden anyway, but we also block clicks and hover).
+let isSpaceIntroPlaying = false;
+
+// Cleanup functions registered by `buildLightweightIntro` (wheel/touchmove/
+// keydown listeners + GSAP tweens). They run on SPA re-init and on
+// `pagehide` so we never accumulate stale handlers when the user navigates
+// away and back via ClientRouter.
+const lightCleanupFns: Array<() => void> = [];
+let lightPagehideRegistered = false;
+
+const scrollerPos =  2500;
 gsap.registerPlugin(ScrollTrigger);
-const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | null, onReset?: () => void) => {
+const buildLandingTimeline = async (
+  heroMask: Element,
+  contentEl: Element | null,
+  landingScene: LandingScene | null,
+  onReset?: () => void,
+) => {
   let SpaceIntroPlayed = false;
   let previousScrollYProgress = -1;
-  let goingDown = false;
+  
+
+  // Wait for the STL fetches kicked off by `preloadLandingEnvironment` to
+  // settle before consuming them in `loadLandingEnvironment`. Both calls hit
+  // the shared `stlGeometryCache`, so the second call is effectively free.
+  await preloadLandingEnvironment();
+  if (landingScene) {
+    loadLandingEnvironment(landingScene.scene);
+  }
   
   // executed when the user scrolls back up
   function reset3D () {
@@ -56,54 +93,64 @@ const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | nu
   function triggerSpaceIntroAnimation() {
         SpaceIntroPlayed = true;
         landingScene && SpaceIntroAnimation3D(landingScene);
-        setTimeout(() => {
-          window.scrollTo(0, 850);
-        }, 2000);
   }
-  
-  const tl = gsap.timeline({
-    onUpdate: () => {
-      const progressPercent = Math.floor(tl.progress() * 100);
-      goingDown = progressPercent > previousScrollYProgress;
-      // console.log(`Scroll Progress: ${progressPercent}% -- ${previousScrollYProgress}%,   Going Down: ${goingDown}, Space Intro Played: ${SpaceIntroPlayed}`);
-      if (progressPercent>80 && !SpaceIntroPlayed && goingDown) triggerSpaceIntroAnimation();
-      previousScrollYProgress = progressPercent;
-    },
-    
-    scrollTrigger: {
-      trigger: heroMask,
-      start: 'top top',
-      end: '+=845',
-      scrub: 1,
-      pin: true,
-      onEnterBack: reset3D
-    },
-  });
 
+
+  // gsap.set(landingScene?.overlay, { autoAlpha: 1, pointerEvents: 'none' });
+  
+  const umbralScore = 80; // umbral score needed to decide whether to use the heavy or lightweight intro
+  const canUseHeavyIntro = gpu.score >= umbralScore;
+  let lastCheck = 0;
+  const tl = gsap.timeline({
+  scrollTrigger: {
+    trigger: heroMask,
+    start: 'top top',
+    end: '+=' + scrollerPos,
+    scrub: .2,
+    pin: true,
+    onEnterBack: reset3D,
+    
+  },
+});
+
+  // Mask shrink — unchanged. The mask is what we are explicitly NOT touching.
   tl.to(heroMask, {
-    webkitMaskSize: '.2%',
-    maskSize: '.2%',
+    webkitMaskSize: '5%',
+    maskSize: '5%',
     ease: 'sine.in',
     duration: 1,
   });
+  tl.to(heroMask, {
+    opacity: 0,
+    ease: 'sine.in',
+    duration: 1,
+  },0.2);
 
-  tl.to('#content', {
+  // Content scale — unchanged. `transform: scale()` is GPU-composited and
+  // already cheap on every frame.
+  tl.to(contentEl, {
     scale: 1,
     ease: 'power2.in',
-    duration: 0.5,
+    duration: 0.5    
   }, '<');
 
+  // Mask position — unchanged.
   tl.to(heroMask, {
     '--mask-pos': '50% 50%',
     ease: 'sine.in',
     duration: 0.4,
+    onComplete: () => {
+      triggerSpaceIntroAnimation();
+    },
   }, 0.6);
 
-  tl.to('#content', {
-    filter: 'blur(30px)',
-    ease: 'power4.in',
-    duration: 0.4,
-  }, 0.2);
+
+  tl.fromTo(
+    contentEl,
+    { opacity: 1 },
+    { opacity: 0, duration: 0.2, ease: 'power2.out' },
+    0.4
+  );
 
   tl.to(heroMask, {
     '--hero-before-opacity': 1,
@@ -113,6 +160,7 @@ const buildLandingTimeline = (heroMask: Element, landingScene: LandingScene | nu
 
 
 };
+
 
 function startTutorialIfNeeded(overlay: HTMLElement | null) {
   if (!overlay) return;
@@ -193,17 +241,30 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
     defaults: {
       ease: 'none',
     },
+    onStart: () => {
+      // Lock detail-view opening while the intro flythrough is running.
+      isSpaceIntroPlaying = true;
+      landingScene.hideTitles();
+    },
     onComplete: () => {
+      isSpaceIntroPlaying = false;
       landingScene.showTitles();
       startTutorialIfNeeded(landingScene.overlay);
-    }
+      document.removeEventListener('click', skipAnimation);
+      window.scrollTo(0, scrollerPos);
+    },
   });
+
+  const skipAnimation = () => {
+    tl.progress(0.85);
+  };
+  document.addEventListener('click', skipAnimation);
 
   const cameraPathAnchors = [
     new Vector3(landingScene.camera.position.x, landingScene.camera.position.y, landingScene.camera.position.z),
     new Vector3(0, 8, 2),
     new Vector3(-4, 6, 0),
-    new Vector3(-7, 2, 0),
+    new Vector3(-7, 3.5, 0),
   ];
 
   const cameraPathCurve = new CatmullRomCurve3(cameraPathAnchors, false, 'catmullrom', 0.6);
@@ -231,7 +292,6 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
     duration: 0.2,
     ease: 'none',
   });
-  // return;
   tl.to(landingScene.camera, {
     zoom: .5,
     duration: 2,
@@ -287,21 +347,52 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   };
 
-  overlay.addEventListener('mousemove', (event) => {
-    if (isDetailView) return;
+  // rAF-coalesced mousemove handling: store the latest event and let the
+  // next animation frame consume it. Keeps the cost to one raycast per
+  // frame even when the browser fires dozens of `mousemove` events.
+  let pendingMouseEvent: MouseEvent | null = null;
+  let mouseRafScheduled = false;
+
+  const processMouseMove = () => {
+    mouseRafScheduled = false;
+    const event = pendingMouseEvent;
+    pendingMouseEvent = null;
+    if (!event) return;
+    if (isDetailView || isSpaceIntroPlaying) {
+      overlay.style.cursor = 'default';
+      return;
+    }
     updateMouseCoords(event);
 
     raycaster.setFromCamera(mouse, landingScene.camera);
-    const objsToBeIntersected = [
-      ...raycaster.intersectObject(landingScene.titles.getActiveTitleGroup()!, true),
-      ...raycaster.intersectObject(landingScene.titles.getActiveBackdropGroup()!, true)
-    ] ;
+    const objsToBeIntersected = raycaster.intersectObjects(
+      [
+        landingScene.titles.getActiveTitleGroup(),
+        landingScene.titles.getActiveBackdropGroup(),
+      ].filter(Boolean) as THREE.Object3D[],
+      true,
+    );
 
     if (objsToBeIntersected.length > 0) {
       overlay.style.cursor = 'pointer';
     } else {
       overlay.style.cursor = 'default';
     }
+  };
+
+  overlay.addEventListener('mousemove', (event) => {
+    if (isDetailView) return;
+    // Skip hover/raycast work while the intro animation is playing so we
+    // don't flash a pointer cursor on top of the flythrough. Cheap shortcut:
+    // bail out without setting any state and without scheduling work.
+    if (isSpaceIntroPlaying) {
+      overlay.style.cursor = 'default';
+      return;
+    }
+    pendingMouseEvent = event;
+    if (mouseRafScheduled) return;
+    mouseRafScheduled = true;
+    requestAnimationFrame(processMouseMove);
   });
 
   const handleToggle = (action: "open" | "close") => {
@@ -313,6 +404,9 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
     const activeBackdropGroup  = landingScene.titles.getActiveBackdropGroup();
 
     if (isDetailView) {
+      // open the detail view
+      // hide the overflow of the html body
+      document.body.style.overflowY = 'hidden';
       
       // Agregar luz direccional en la posición de la cámara
       detailViewLight = new THREE.DirectionalLight(0x68d9ff, 40);
@@ -446,16 +540,20 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
         }
         
         // if in the especific group, override the rotation and position
-        // console.log("group id", group.id);
+        console.log("group id", group.id);
         
-        if (group.id === 24) { // mountain
+        if (group.id === 19) { // mountain
           // do nothing
         }
-        if (group.id === 30) { // cube gear
+        if (group.id === 25) { // cube gear
           // do nothing
         }
-        if (group.id === 28) { // hands
+        if (group.id === 26) { // hands
           // do nothing
+          // rotate the hands to face the camera
+          rotationY += MathUtils.degToRad(45); 
+          localTarget.z += 40;
+          localTarget.x += 170;
         }
         if (group.id === 21) { // thinking man
           firstThinkingManRotationY = targetGroup.children[0].rotation.y;
@@ -510,6 +608,14 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       });
 
     } else {
+      // close the detail view
+      // restore the overflow of the html body
+      document.body.style.overflowY = 'auto';
+      document.body.style.overflowX = 'hidden';
+      // restore sections scroll
+      document.querySelector<HTMLElement>('#experienceDetailedView')?.scrollTo({ top: 0, behavior: 'auto' });
+      document.querySelector<HTMLElement>('#projectsDetailedView')?.scrollTo({ top: 0, behavior: 'auto' });
+      
       
       
       // Quitar la luz direccional si existe
@@ -596,9 +702,20 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       return;
     }
 
+    // Ignore clicks that land during the space intro animation: the camera
+    // and titles are still settling, so opening the detail view here would
+    // produce a broken transition.
+    if (isSpaceIntroPlaying) return;
+
     raycaster.setFromCamera(mouse, landingScene.camera);
-    if (raycaster.intersectObject(landingScene.titles.getActiveBackdropGroup()!).length > 0
-    || raycaster.intersectObject(landingScene.titles.getActiveTitleGroup()!).length > 0) {
+    const clickHits = raycaster.intersectObjects(
+      [
+        landingScene.titles.getActiveBackdropGroup(),
+        landingScene.titles.getActiveTitleGroup(),
+      ].filter(Boolean) as THREE.Object3D[],
+      true,
+    );
+    if (clickHits.length > 0) {
       handleToggle("open");
     }
   };
@@ -620,11 +737,12 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
   };
 }
 
-export const initializeHomeLandingScene = (lang: Lang = 'en') => {
+export const initializeHomeLandingScene = async (lang: Lang = 'en') => {
   window.scrollTo(0, 0);
 
   const heroMask = document.querySelector('#hero-mask');
   const overlay = document.querySelector('#three-overlay') as HTMLElement | null;
+  const contentEl = document.querySelector('#content');
 
   const landingScene = createHomeLandingThreeScene(overlay, lang);
 
@@ -636,7 +754,29 @@ export const initializeHomeLandingScene = (lang: Lang = 'en') => {
     ? setupDetailViewToggle(landingScene, overlay)
     : null;
 
-  buildLandingTimeline(heroMask, landingScene, () => {
+  
+
+  // Register a one-shot `pagehide` cleanup for any lightweight state
+  // accumulated during this init. Guarded so multiple inits (SPA
+  // navigation) only register one listener.
+  if (!lightPagehideRegistered && typeof window !== 'undefined') {
+    lightPagehideRegistered = true;
+    window.addEventListener(
+      'pagehide',
+      () => {
+        lightCleanupFns.splice(0).forEach((fn) => {
+          try {
+            fn();
+          } catch (err) {
+            console.warn('Light cleanup error:', err);
+          }
+        });
+      },
+      { once: true },
+    );
+  }
+
+  await buildLandingTimeline(heroMask, contentEl, landingScene, () => {
     detailToggle?.close();
   });
 };
@@ -653,7 +793,7 @@ const getAnchorCenter = (el: HTMLElement) => {
     // the el is needed to properly position the titles, but in case it can't be found we fallback to some percentage-based screen positions
     const r = el.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-  };
+};
   
 const screenToWorldAtDistance = (clientX: number, clientY: number, camera: Camera, distance: number) => {
   const ndc = new Vector3((clientX / window.innerWidth) * 2 - 1, - (clientY / window.innerHeight) * 2 + 1, 0.5);

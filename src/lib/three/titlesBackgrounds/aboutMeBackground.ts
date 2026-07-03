@@ -17,7 +17,14 @@ export const createAboutMeBackground = (): TitleBackgroundController => {
   let showTween: gsap.core.Tween | null = null;
   let previousCameraYaw: number | null = null;
   let groupToBeSpinned: THREE.Group | null = null;
-  
+  // Latest `onHidden` callback to fire when the fade-out tween resolves.
+  // Captured in the closure so `loadBackdrops` (titles manager) can install
+  // it once without each transition having to re-bind it.
+  let onHidden: (() => void) | null = null;
+  // Reused across frames to avoid allocating a new Euler each render tick
+  // (GC pressure under heavy camera motion).
+  const cameraEuler = new THREE.Euler();
+
 
   return {
     modelPaths: ABOUT_ME_MODEL_PATHS,
@@ -125,6 +132,12 @@ export const createAboutMeBackground = (): TitleBackgroundController => {
           duration: 0.35,
           opacity: 0,
           ease: 'power1.inOut',
+          onComplete: () => {
+            // Notify the titles manager once the fade-out finishes so it
+            // can flip the visibility root off and stop submitting draw
+            // calls for this section.
+            onHidden?.();
+          },
         });
       }
     },
@@ -132,7 +145,7 @@ export const createAboutMeBackground = (): TitleBackgroundController => {
       if (!groupToBeSpinned) return;
 
       if (camera) {
-        const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+        const e = cameraEuler.setFromQuaternion(camera.quaternion, 'YXZ');
         const currentYaw = e.y;
 
         if (previousCameraYaw === null) {
@@ -153,6 +166,13 @@ export const createAboutMeBackground = (): TitleBackgroundController => {
     dispose: () => {
       groupToBeSpinned = null;
       previousCameraYaw = null;
+      onHidden = null;
+    },
+    get onHidden(): (() => void) | undefined {
+      return onHidden ?? undefined;
+    },
+    set onHidden(callback: (() => void) | undefined) {
+      onHidden = callback ?? null;
     },
   };
 };

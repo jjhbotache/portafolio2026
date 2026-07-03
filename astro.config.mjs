@@ -6,6 +6,10 @@ import node from '@astrojs/node';
 import icon from 'astro-icon';
 
 export default defineConfig({
+  redirects: {
+    '/': '/es'
+  },
+  
   output: 'server',
 
   adapter: node({

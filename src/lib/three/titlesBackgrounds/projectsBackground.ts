@@ -31,6 +31,13 @@ export const createProjectsBackground = (): TitleBackgroundController => {
   let speedTween: gsap.core.Tween | null = null;
   const speedController = { value: SPEED_MIN };
   let previousCameraYaw: number | null = null;
+  // Latest `onHidden` callback. The hide path is synchronous for this
+  // background (no fade-out tween), so we invoke the callback right after
+  // applying the depth-write change below.
+  let onHidden: (() => void) | null = null;
+  // Reused across frames; allocating this Euler every render tick was a
+  // steady source of GC pressure while the camera was being orbited.
+  const cameraEuler = new THREE.Euler();
   // timer para animar si elapsedTime no avanza (usa Page Visibility API)
   const internalTimer = new THREE.Timer();
 
@@ -124,6 +131,8 @@ export const createProjectsBackground = (): TitleBackgroundController => {
           } catch (e) {}
         });
       }
+      // Hide is synchronous (no fade-out tween), so signal completion now.
+      onHidden?.();
     },
     update: ({ elapsedTime, camera, titleQuaternion }) => {
       if (!modelGroup ) return;
@@ -149,7 +158,7 @@ export const createProjectsBackground = (): TitleBackgroundController => {
 
 
       if (camera) {
-        const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+        const e = cameraEuler.setFromQuaternion(camera.quaternion, 'YXZ');
         const currentYaw = e.y;
 
         if (previousCameraYaw === null) {
@@ -189,7 +198,14 @@ export const createProjectsBackground = (): TitleBackgroundController => {
       lastTime = 0;
       speedTween?.kill();
       speedTween = null;
+      onHidden = null;
       try { internalTimer.dispose(); } catch (e) {}
+    },
+    get onHidden(): (() => void) | undefined {
+      return onHidden ?? undefined;
+    },
+    set onHidden(callback: (() => void) | undefined) {
+      onHidden = callback ?? null;
     },
   };
 };

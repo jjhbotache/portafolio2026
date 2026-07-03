@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import gsap from 'gsap';
-import { addPlanarUvs, materialFactory } from './materialFactory';
+import { materialFactory } from './materialFactory';
+import {
+  splitGeometryIntoComponents,
+  buildComponentGeometry,
+} from './stlComponentSplitter';
 
 const PLATFORM_NEON_PART_INDEXES = new Set([1]);
 const FLOOR_NEON_PART_INDEXES = new Set([0]);
@@ -12,109 +16,45 @@ const FLOOR_ROTATION_X = THREE.MathUtils.degToRad(270);
 // Module-level env materials for fading the floor/platform
 let envMaterials: THREE.Material[] = [];
 
+// Module-level cache for parsed STL geometries. Both `preloadLandingEnvironment`
+// and `loadLandingEnvironment` share this cache so the heavy geometry parsing
+// happens only once, even when the user reloads the scene (e.g. on language
+// toggle).
+const stlGeometryCache = new Map<string, THREE.BufferGeometry>();
 
-
-
-const splitGeometryIntoComponents = (geometry: THREE.BufferGeometry) => {
-  geometry.computeVertexNormals();
-
-  const nonIndexed = geometry.index ? geometry.toNonIndexed() : geometry;
-  const posAttr = nonIndexed.getAttribute('position');
-  const positions = posAttr.array as Float32Array;
-  const faceCount = positions.length / 9;
-
-  const vertToFaces = new Map<string, number[]>();
-  const faceVertexKeys: string[][] = [];
-
-  const vertexKey = (x: number, y: number, z: number) => `${x.toFixed(5)},${y.toFixed(5)},${z.toFixed(5)}`;
-
-  for (let faceIndex = 0; faceIndex < faceCount; faceIndex++) {
-    const base = faceIndex * 9;
-    const keys: string[] = [];
-
-    for (let vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
-      const x = positions[base + vertexIndex * 3 + 0];
-      const y = positions[base + vertexIndex * 3 + 1];
-      const z = positions[base + vertexIndex * 3 + 2];
-      const key = vertexKey(x, y, z);
-
-      keys.push(key);
-
-      const linkedFaces = vertToFaces.get(key) || [];
-      linkedFaces.push(faceIndex);
-      vertToFaces.set(key, linkedFaces);
+const fetchStlGeometry = (loader: STLLoader, filePath: string): Promise<THREE.BufferGeometry> => {
+  return new Promise((resolve) => {
+    const cached = stlGeometryCache.get(filePath);
+    if (cached) {
+      resolve(cached);
+      return;
     }
-
-    faceVertexKeys.push(keys);
-  }
-
-  const neighbors: number[][] = Array.from({ length: faceCount }, () => []);
-
-  for (let faceIndex = 0; faceIndex < faceCount; faceIndex++) {
-    const keys = faceVertexKeys[faceIndex];
-    const neighSet = new Set<number>();
-
-    for (const key of keys) {
-      const faces = vertToFaces.get(key) || [];
-      for (const otherFace of faces) {
-        if (otherFace !== faceIndex) {
-          neighSet.add(otherFace);
-        }
-      }
-    }
-
-    neighbors[faceIndex] = Array.from(neighSet);
-  }
-
-  const visited = new Uint8Array(faceCount);
-  const components: number[][] = [];
-
-  for (let faceIndex = 0; faceIndex < faceCount; faceIndex++) {
-    if (visited[faceIndex]) {
-      continue;
-    }
-
-    const stack = [faceIndex];
-    const componentFaces: number[] = [];
-    visited[faceIndex] = 1;
-
-    while (stack.length > 0) {
-      const currentFace = stack.pop() as number;
-      componentFaces.push(currentFace);
-
-      for (const neighbor of neighbors[currentFace]) {
-        if (!visited[neighbor]) {
-          visited[neighbor] = 1;
-          stack.push(neighbor);
-        }
-      }
-    }
-
-    components.push(componentFaces);
-  }
-
-  return { components, positions };
+    loader.load(filePath, (geometry) => {
+      stlGeometryCache.set(filePath, geometry);
+      resolve(geometry);
+    });
+  });
 };
 
-const buildComponentGeometry = (componentFaces: number[], positions: Float32Array) => {
-  const outPositions = new Float32Array(componentFaces.length * 9);
+const buildPlatformFromGeometry = (
+  geometry: THREE.BufferGeometry,
+  targetRoot: THREE.Group,
+  neonIndexes: Set<number>,
+  neonMaterialName: 'platformNeon' | 'floorNeon',
+  darkMaterialName: 'platformDark' | 'floorDark',
+) => {
+  const { components, positions } = splitGeometryIntoComponents(geometry);
 
-  for (let i = 0; i < componentFaces.length; i++) {
-    const faceIndex = componentFaces[i];
-    const srcBase = faceIndex * 9;
-    const dstBase = i * 9;
-
-    for (let j = 0; j < 9; j++) {
-      outPositions[dstBase + j] = positions[srcBase + j];
-    }
-  }
-
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(outPositions, 3));
-  addPlanarUvs(geometry);
-  geometry.computeVertexNormals();
-
-  return geometry;
+  components.forEach((componentFaces, partIndex) => {
+    const componentGeometry = buildComponentGeometry(componentFaces, positions);
+    const materialName = neonIndexes.has(partIndex) ? neonMaterialName : darkMaterialName;
+    const mat = materialFactory(materialName) as THREE.Material & { opacity?: number; transparent?: boolean };
+    mat.transparent = true;
+    if (typeof (mat as any).opacity === 'undefined') (mat as any).opacity = 1;
+    const mesh = new THREE.Mesh(componentGeometry, mat);
+    envMaterials.push(mat);
+    targetRoot.add(mesh);
+  });
 };
 
 const loadCompositeStl = (
@@ -126,18 +66,7 @@ const loadCompositeStl = (
   darkMaterialName: 'platformDark' | 'floorDark',
 ) => {
   loader.load(filePath, (geometry) => {
-    const { components, positions } = splitGeometryIntoComponents(geometry);
-
-    components.forEach((componentFaces, partIndex) => {
-      const componentGeometry = buildComponentGeometry(componentFaces, positions);
-      const materialName = neonIndexes.has(partIndex) ? neonMaterialName : darkMaterialName;
-      const mat = materialFactory(materialName) as THREE.Material & { opacity?: number; transparent?: boolean };
-      mat.transparent = true;
-      if (typeof (mat as any).opacity === 'undefined') (mat as any).opacity = 1;
-      const mesh = new THREE.Mesh(componentGeometry, mat);
-      envMaterials.push(mat);
-      targetRoot.add(mesh);
-    });
+    buildPlatformFromGeometry(geometry, targetRoot, neonIndexes, neonMaterialName, darkMaterialName);
   });
 };
 
@@ -162,36 +91,40 @@ const calculateFloorTileSpacing = (geometry: THREE.BufferGeometry) => {
   return { x: size.x, z: size.z };
 };
 
+const buildFloorGridFromGeometry = (geometry: THREE.BufferGeometry, scene: THREE.Scene) => {
+  const { components, positions } = splitGeometryIntoComponents(geometry);
+  const componentGeometries = components.map((componentFaces) =>
+    buildComponentGeometry(componentFaces, positions),
+  );
+
+  const { x: spacingX, z: spacingZ } = calculateFloorTileSpacing(geometry);
+
+  for (let gridX = -1; gridX <= 1; gridX++) {
+    for (let gridZ = -1; gridZ <= 1; gridZ++) {
+      const floorRoot = new THREE.Group();
+      floorRoot.scale.set(FLOOR_SCALE, FLOOR_SCALE, FLOOR_SCALE);
+      floorRoot.rotation.set(FLOOR_ROTATION_X, 0, 0);
+      floorRoot.position.set(gridX * spacingX, FLOOR_Y, gridZ * spacingZ);
+      scene.add(floorRoot);
+
+      componentGeometries.forEach((componentGeometry, partIndex) => {
+        const isNeonPart = FLOOR_NEON_PART_INDEXES.has(partIndex);
+        const materialName = isNeonPart ? 'floorNeon' : 'floorDark';
+        const mat = materialFactory(materialName) as THREE.Material & { opacity?: number; transparent?: boolean };
+        mat.transparent = true;
+        if (typeof (mat as any).opacity === 'undefined') (mat as any).opacity = 1;
+        const mesh = new THREE.Mesh(componentGeometry, mat);
+        envMaterials.push(mat);
+        floorRoot.add(mesh);
+      });
+    }
+  }
+};
+
 const createFloorGrid = (loader: STLLoader, scene: THREE.Scene) => {
   loader.load('/3d/floor.stl', (geometry) => {
-    const { components, positions } = splitGeometryIntoComponents(geometry);
-    const componentGeometries = components.map((componentFaces) =>
-      buildComponentGeometry(componentFaces, positions),
-    );
-
-    const { x: spacingX, z: spacingZ } = calculateFloorTileSpacing(geometry);
-
-    for (let gridX = -1; gridX <= 1; gridX++) {
-      for (let gridZ = -1; gridZ <= 1; gridZ++) {
-        const floorRoot = new THREE.Group();
-        floorRoot.scale.set(FLOOR_SCALE, FLOOR_SCALE, FLOOR_SCALE);
-        floorRoot.rotation.set(FLOOR_ROTATION_X, 0, 0);
-        floorRoot.position.set(gridX * spacingX, FLOOR_Y, gridZ * spacingZ);
-        scene.add(floorRoot);
-
-        componentGeometries.forEach((componentGeometry, partIndex) => {
-          const isNeonPart = FLOOR_NEON_PART_INDEXES.has(partIndex);
-          const materialName = isNeonPart ? 'floorNeon' : 'floorDark';
-          const mat = materialFactory(materialName) as THREE.Material & { opacity?: number; transparent?: boolean };
-          mat.transparent = true;
-          if (typeof (mat as any).opacity === 'undefined') (mat as any).opacity = 1;
-          const mesh = new THREE.Mesh(componentGeometry, mat);
-          envMaterials.push(mat);
-          floorRoot.add(mesh);
-        });
-      }
-    }
-      });
+    buildFloorGridFromGeometry(geometry, scene);
+  });
 };
 
 export const fadeOutFloor = (duration = 0.5) => {
@@ -273,16 +206,51 @@ export const loadLandingEnvironment = (scene: THREE.Scene) => {
   platformRoot.rotation.set(THREE.MathUtils.degToRad(270), 0, 0);
   platformRoot.position.set(0, -3, 0);
   scene.add(platformRoot);
+  // Use the cached geometry when `preloadLandingEnvironment` already kicked
+  // off the fetch — the parsed BufferGeometry is reused as-is and we skip the
+  // HTTP request and STL parsing entirely.
+  
+  const cachedPlatform = stlGeometryCache.get('/3d/platform.stl');
+  if (cachedPlatform) {
+    buildPlatformFromGeometry(
+      cachedPlatform,
+      platformRoot,
+      PLATFORM_NEON_PART_INDEXES,
+      'platformNeon',
+      'platformDark',
+    );
+  } else {
+    loadCompositeStl(
+      loader,
+      '/3d/platform.stl',
+      platformRoot,
+      PLATFORM_NEON_PART_INDEXES,
+      'platformNeon',
+      'platformDark',
+    );
+  }
+  
 
-  loadCompositeStl(
-    loader,
-    '/3d/platform.stl',
-    platformRoot,
-    PLATFORM_NEON_PART_INDEXES,
-    'platformNeon',
-    'platformDark',
-  );
-  createFloorGrid(loader, scene);
+  // const cachedFloor = stlGeometryCache.get('/3d/floor.stl');
+  // if (cachedFloor) {
+  //   buildFloorGridFromGeometry(cachedFloor, scene);
+  // } else {
+  //   createFloorGrid(loader, scene);
+  // }
+};
+
+// Kick off the STL fetches early so the parsed geometries are ready by the
+// time `loadLandingEnvironment` is invoked. Called from `buildLandingTimeline`
+// the moment the user starts scrolling, instead of waiting until the scene
+// is fully constructed. The shared `stlGeometryCache` makes the second
+// load effectively instant. Returns a promise that resolves once both fetches
+// (or cache lookups) complete so the caller can `await` for back-pressure.
+export const preloadLandingEnvironment = (): Promise<void> => {
+  const loader = new STLLoader();
+  return Promise.all([
+    fetchStlGeometry(loader, '/3d/platform.stl'),
+    fetchStlGeometry(loader, '/3d/floor.stl'),
+  ]).then(() => undefined);
 };
 
 let envRoot: THREE.Group | null = null;

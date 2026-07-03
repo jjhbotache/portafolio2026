@@ -42,11 +42,19 @@ html, body {
   font-style: normal;
   font-display: swap;
 }
+/* Tron font used by the section titles */
+@font-face {
+  font-family: '8bit';
+  src: url('/fonts/8bit.ttf') format('truetype');
+}
 
 .tron-font {
   font-family: var(--font-tron);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  /* letter-spacing: 0.08em; */
+}
+
+.bit8-font {
+  font-family: '8bit', monospace;
 }
 
 /* Letters created by textReveal.ts - hidden until the reveal animation runs */
@@ -116,4 +124,110 @@ html, body {
 .hide-scrollbar {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+/* Technology marquee rows rendered in the About Me section. Each row has a
+   small label on the left, a fade-masked track on the right and the icons
+   inside are duplicated by the Astro template so the GSAP loop is seamless. */
+.tech-marquee-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.tech-marquee-label {
+  flex-shrink: 0;
+  font-family: var(--font-tron);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+  min-width: 5.5rem;
+  text-align: right;
+  opacity: 0.85;
+}
+
+.tech-marquee-label--front { color: var(--color-secondary); }
+.tech-marquee-label--back  { color: var(--color-tertiary); }
+.tech-marquee-label--others { color: var(--color-primary); }
+
+.tech-marquee-mask {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
+  /* Soft fade on both edges so icons don't pop in/out harshly. */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+}
+
+.tech-marquee-track {
+  display: flex;
+  align-items: center;
+  gap: 2.25rem;
+  width: max-content;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.tech-marquee-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.25s ease;
+}
+
+.tech-marquee-item:hover {
+  background: rgba(0, 181, 232, 0.15);
+  border-color: rgba(0, 181, 232, 0.45);
+  color: var(--color-secondary);
+  transform: translateY(-2px);
+}
+
+.tech-marquee-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.tech-marquee-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 640px) {
+  .tech-marquee-row {
+    gap: 0.5rem;
+  }
+  .tech-marquee-label {
+    min-width: 4rem;
+    font-size: 0.6rem;
+  }
+  .tech-marquee-icon {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+  .tech-marquee-name {
+    font-size: 0.75rem;
+  }
 }

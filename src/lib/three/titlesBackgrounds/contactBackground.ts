@@ -7,7 +7,7 @@ const CONTACT_MODEL_PATHS = ['/3d/the_creation_of_adam.glb'] as const;
 
 const MIN_CAMERA_YAW_DEG = -45; // from yaw angle
 const MAX_CAMERA_YAW_DEG = -134; // to yaw angle
-const HANDS_TO_DISTANCE = 3; 
+const HANDS_TO_DISTANCE = 3;
 const HAND_MAX_ROTATION_DEG = -90;
 let HANDS_FROM = {
   izq: { pos: { x: 0, y: 0, z: 0 }, rot: { x: 0, y: 0, z: 0 } },
@@ -16,12 +16,10 @@ let HANDS_FROM = {
 
 export const createContactBackground = (): TitleBackgroundController => {
   let hands: THREE.Object3D[] = [];
-  let previousCameraQuaternion: THREE.Quaternion | null = null;
   let startCameraYaw: number | null = null;
-
-  // Store original local transforms so hands remain idle but ready to animate
-  let handOriginalPositions: THREE.Vector3[] = [];
-  let handOriginalQuaternions: THREE.Quaternion[] = [];
+  // Latest `onHidden` callback. Hide is synchronous (just state reset
+  // + timeline pause) so we invoke the callback right after the reset.
+  let onHidden: (() => void) | null = null;
 
   const cameraEuler = new THREE.Euler();
   let leftHandTl = gsap.timeline({ repeat: -1, yoyo: true,paused: true });
@@ -77,26 +75,19 @@ export const createContactBackground = (): TitleBackgroundController => {
 
       for (let i = 0; i < Math.min(2, candidates.length); i++) hands.push(candidates[i].node);
 
-
-      // Save original local transforms so the hands stay idle and are ready to animate later
-      handOriginalPositions = hands.map((h) => h.position.clone());
-      handOriginalQuaternions = hands.map((h) => h.quaternion.clone());
-      
-
-      previousCameraQuaternion = null;
       startCameraYaw = null;
-      
+
       // move hands to be closer
       hands.forEach((hand, i) => {
         if (i % 2 === 0) {
           // Mano derecha
           hand.position.z -= .13;
           hand.position.y -= .2;
-          
+
           // save for the from
           HANDS_FROM.der.pos = hand.position.clone();
           HANDS_FROM.der.rot = hand.rotation.clone();
-          
+
         } else {
           // Mano izquierda
           hand.position.z += .13;
@@ -105,25 +96,25 @@ export const createContactBackground = (): TitleBackgroundController => {
           HANDS_FROM.izq.rot = hand.rotation.clone();
         }
       });
-      
-      
+
+
       hands.forEach((hand, i) => {
         if (i % 2 === 0) {
           // Mano derecha
           rightHandTl.to( hand.rotation, { z: THREE.MathUtils.degToRad(HAND_MAX_ROTATION_DEG) }, 0)
-          rightHandTl.to( hand.rotation, { z: HANDS_FROM.der.rot.z } , "50%") // vuelve a la posición original  
+          rightHandTl.to( hand.rotation, { z: HANDS_FROM.der.rot.z } , "50%") // vuelve a la posición original
           rightHandTl.to( hand.rotation, { z: THREE.MathUtils.degToRad(HAND_MAX_ROTATION_DEG) },"100%")
-          
+
           rightHandTl.to( hand.position, { z: HANDS_FROM.der.pos.z + HANDS_TO_DISTANCE }, 0) // mueve la mano hacia la cámara mientras rota
           rightHandTl.to( hand.position, { z: HANDS_FROM.der.pos.z }, "50%") // vuelve a la posición original
           rightHandTl.to( hand.position, { z: HANDS_FROM.der.pos.z + HANDS_TO_DISTANCE }, "100%") // mueve la mano hacia la cámara mientras rota
-          
+
         } else {
           // Mano izquierda
           leftHandTl.to( hand.rotation, { y: THREE.MathUtils.degToRad(-HAND_MAX_ROTATION_DEG) }, 0)
-          leftHandTl.to( hand.rotation, { y: HANDS_FROM.izq.rot.z } , "50%") // vuelve a la posición original  
+          leftHandTl.to( hand.rotation, { y: HANDS_FROM.izq.rot.z } , "50%") // vuelve a la posición original
           leftHandTl.to( hand.rotation, { y: THREE.MathUtils.degToRad(-HAND_MAX_ROTATION_DEG) },"100%")
-          
+
           leftHandTl.to( hand.position, { z: HANDS_FROM.izq.pos.z - HANDS_TO_DISTANCE }, 0) // mueve la mano hacia la cámara mientras rota
           leftHandTl.to( hand.position, { z: HANDS_FROM.izq.pos.z }, "50%") // vuelve a la posición original
           leftHandTl.to( hand.position, { z: HANDS_FROM.izq.pos.z - HANDS_TO_DISTANCE }, "100%") // mueve la mano hacia la cámara mientras rota
@@ -160,56 +151,49 @@ export const createContactBackground = (): TitleBackgroundController => {
           ); // mueve la mano hacia abajo mientras rota
         }
       });
-      
+
 
       backdropGroup.clear();
       backdropGroup.add(firstClone.model);
       return [...firstClone.materials];
     },
     onShow: () => {
-      previousCameraQuaternion = null;
       startCameraYaw = null;
       leftHandTl.restart();
       rightHandTl.restart();
-      
-      
-      
+
+
+
     },
     onHide: () => {
-      previousCameraQuaternion = null;
       startCameraYaw = null;
+      // Pause hand timelines so they stop drifting while hidden.
+      leftHandTl.pause();
+      rightHandTl.pause();
+      onHidden?.();
     },
     update: ({ camera }) => {
-      // Always log camera rotation (yaw/pitch/roll) in degrees for debugging
       cameraEuler.setFromQuaternion(camera.quaternion, 'YXZ');
-      const pitch = cameraEuler.x;
       const yaw = cameraEuler.y;
-      const roll = cameraEuler.z;
-      const pitchDeg = THREE.MathUtils.radToDeg(pitch);
       const yawDeg = THREE.MathUtils.radToDeg(yaw);
-      const rollDeg = THREE.MathUtils.radToDeg(roll);
 
-      // console.log(
-      //   `[contactBackground] Camera rotation (deg) — yaw: ${yawDeg.toFixed(2)}, pitch: ${pitchDeg.toFixed(2)}, roll: ${rollDeg.toFixed(2)}`
-      // );
-      // log from 0 to 100 the pos
-      
       const animationProgress = gsap.utils.mapRange(MIN_CAMERA_YAW_DEG,MAX_CAMERA_YAW_DEG,0,100,yawDeg);
       // update timelines based on camera yaw
       if(animationProgress > 0 && animationProgress < 100){
         leftHandTl.progress(animationProgress / 100);
         rightHandTl.progress(animationProgress / 100);
       }
-
-
-      previousCameraQuaternion = camera.quaternion.clone();
     },
     dispose: () => {
       hands = [];
-      previousCameraQuaternion = null;
       startCameraYaw = null;
-      handOriginalPositions = [];
-      handOriginalQuaternions = [];
+      onHidden = null;
+    },
+    get onHidden(): (() => void) | undefined {
+      return onHidden ?? undefined;
+    },
+    set onHidden(callback: (() => void) | undefined) {
+      onHidden = callback ?? null;
     },
   };
 };

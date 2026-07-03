@@ -15,6 +15,10 @@ export const createExperienceBackground = (): TitleBackgroundController => {
   let climbTimeline: gsap.core.Timeline | null = null;
   let blinkTimeline: gsap.core.Timeline | null = null;
   let collectedMaterials: THREE.Material[] = [];
+  // Latest `onHidden` callback. Hide is synchronous for this background
+  // (timelines just get paused, no opacity tween), so we invoke the
+  // callback right after pausing.
+  let onHidden: (() => void) | null = null;
 
   return {
     modelPaths: EXPERIENCE_MODEL_PATHS,
@@ -23,8 +27,18 @@ export const createExperienceBackground = (): TitleBackgroundController => {
       if (!sourceModel) {
         return [];
       }
-
-      const { model, materials } = cloneBackdropModel(sourceModel);
+      // modify the material, to make it less shiner
+      const { model, materials } = cloneBackdropModel(sourceModel, (material) => {
+        if (material instanceof THREE.MeshStandardMaterial) {
+          material.color = new THREE.Color(0x2e2e37);
+        }
+        // ensure backdrop materials are initially invisible and don't write depth
+        material.transparent = true;
+        material.opacity = 1;
+        // disable depth write so invisible backdrops don't occlude others
+        (material as THREE.Material).depthWrite = false as any;
+        material.needsUpdate = true;
+      });
       collectedMaterials = materials ?? [];
       
       // 1. Centrar la montaña: calculamos su caja delimitadora (bounding box) real 
@@ -60,7 +74,7 @@ export const createExperienceBackground = (): TitleBackgroundController => {
       });
       
       const particleMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(2, 50, 50), 
+        new THREE.SphereGeometry(2, 16, 16), 
         particleMaterial
       );
       const particleLight = new THREE.PointLight(0x00aaff, 5, 2000);
@@ -142,6 +156,7 @@ export const createExperienceBackground = (): TitleBackgroundController => {
           } catch (e) {}
         });
       }
+      onHidden?.();
     },
     update: () => {
       // Animation is timeline-driven.
@@ -154,6 +169,13 @@ export const createExperienceBackground = (): TitleBackgroundController => {
       blinkTimeline?.kill();
       blinkTimeline = null;
       collectedMaterials = [];
+      onHidden = null;
+    },
+    get onHidden(): (() => void) | undefined {
+      return onHidden ?? undefined;
+    },
+    set onHidden(callback: (() => void) | undefined) {
+      onHidden = callback ?? null;
     },
   };
 };

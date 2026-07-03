@@ -26,8 +26,13 @@ const descriptionByLang: Record<Lang, string> = {
   <div
     id="hero-mask"
     class="masked h-full w-full"
-  >
-    <div id="content" class="relative flex items-center justify-center gap-10 h-screen bg-linear-to-br from-gray-900 to-gray-950">
+    >
+    <div id="content" class="relative flex items-center justify-end gap-10 h-screen bg-linear-to-br from-gray-900 to-gray-950">
+      <div class="basis-3/5 pr-[15em]">
+        <h1 class="bit8-font text-6xl font-bold text-end bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
+          Juan Jose Huertas
+        </h1>
+      </div>
 
       <img
         src="/me.png"
@@ -37,44 +42,44 @@ const descriptionByLang: Record<Lang, string> = {
         fetchpriority="low"
         class="fixed h-[110vh]  transform left-[25%] -translate-x-1/2 top-[65%] -translate-y-1/2 drop-shadow-secondary/20 drop-shadow-xl "
       />
-      <h1 class=" max-w-150 text-[5rem] font-bold bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
-        juan
-      </h1>
 
       <div class=" fixed bottom-[15%] left-[50%] transform -translate-x-1/2 h-40 w-40 flex items-center justify-center ">
         <Icon name="downArrow" class="w-10 h-10 text-secondary animate-bounce" />
       </div>
 
     </div>
+    
   </div>
-    <div id="three-overlay" aria-hidden="true">
-      <div id="tutorial-overlay" aria-hidden="true">
-        <div id="tutorial-icon" class="tutorial-icon" aria-hidden="true">
-          <!-- Cursor icon (desktop) -->
-          <Icon name="cursor" id="cursor-icon" class="w-24 h-24 text-secondary" />
+  <div class="h-px"></div>
+  
+  <div id="three-overlay" aria-hidden="true">
+    <div id="tutorial-overlay" aria-hidden="true">
+      <div id="tutorial-icon" class="tutorial-icon" aria-hidden="true">
+        <!-- Cursor icon (desktop) -->
+        <Icon name="cursor" id="cursor-icon" class="w-24 h-24 text-secondary" />
 
-          <!-- Tap icon (touch) -->
-          <Icon name="tap" id="tap-icon" class="w-24 h-24 text-secondary" />
+        <!-- Tap icon (touch) -->
+        <Icon name="tap" id="tap-icon" class="w-24 h-24 text-secondary" />
 
-        </div>
       </div>
     </div>
+  </div>
 
-    <!-- a 3*3 grid -->
-    <div id="detail-overlay" class="fixed inset-0 z-50 opacity-0 overflow-y-auto pointer-events-none hidden grid-cols-3 grid-rows-3  transition-opacity duration-300">
-      <ExperienceDetail lang={lang} />
-      <AboutMeDetail lang={lang} />
-      <ContactDetail lang={lang} />
-      <ProjectsDetail lang={lang} />
-    </div>
+  <!-- a 3*3 grid -->
+  <div id="detail-overlay" class="fixed inset-0 z-50 opacity-0 overflow-y-auto pointer-events-none hidden grid-cols-3 grid-rows-3  transition-opacity duration-300 backdrop-blur-xs" >
+    <ExperienceDetail lang={lang} />
+    <AboutMeDetail lang={lang} />
+    <ContactDetail lang={lang} />
+    <ProjectsDetail lang={lang} />
+  </div>
+  
 
-  <!-- div used for trigger the onComplete event of the animation -->
-  <div class="h-px"></div>
-  <!-- link used for redirect with transitions -->
-  <a href={`/${lang}/menu`} id="menu-link" />
 </Layout>
 
 <style>
+  #content, .hero-mask {
+    will-change: transform, opacity, -webkit-mask-size, mask-size;
+  }
   #content{
     /* padding: 1rem; */
     transform: scale(1.5);
@@ -140,10 +145,10 @@ const descriptionByLang: Record<Lang, string> = {
 <script>
   import { initializeHomeLandingScene } from '../../lib/homeLandingScene';
 
-  // Read the locale from the URL on the client; the Astro page already has
-  // it but the scene runs entirely in the browser and needs the same value.
   const seg = window.location.pathname.split('/').filter(Boolean)[0];
   const lang = seg === 'es' || seg === 'en' ? seg : 'en';
 
-  initializeHomeLandingScene(lang as 'en' | 'es');
+  initializeHomeLandingScene(lang as 'en' | 'es').catch((err) => {
+    console.error('Failed to initialize landing scene:', err);
+  });
 </script>
