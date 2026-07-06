@@ -133,7 +133,7 @@ const setupResize = (
 // small +2 steps if the device has headroom. A bigger step causes the loop
 // to skip over the 45-55 FPS zone on mid-range hardware, leaving the user
 // with an unnecessarily choppy experience.
-const TARGET_FPS_FLOOR = 30;
+const TARGET_FPS_FLOOR = 25;
 const TARGET_FPS_CEILING = 60;
 const TARGET_FPS_STEP = 1;
 const HEADROOM_FACTOR = 0.6;
@@ -242,7 +242,7 @@ export const createHomeLandingThreeScene = (
 
   // alpha: false because the background is opaque, saving a composite per frame.
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, .45));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, .8 ));
   renderer.setSize(window.innerWidth, window.innerHeight);
   configureMaterialAnisotropy(renderer);
   overlay.appendChild(renderer.domElement);

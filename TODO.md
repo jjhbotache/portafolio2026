@@ -1,0 +1,13 @@
+- [ ]finish experience section
+  - [✅]fix slider
+  - [✅]add tutorial for slider (scroll down)
+  - [✅]add content
+- [ ]fix back button
+- [ ]finish projects section
+- [ ]finish about section
+- [ ]finish contact section
+- [ ]adding direct menu links to each section
+- [ ]tutorial with driver js
+- [ ]adding support for mobile
+- [ ]adding models for english titles
+- [ ]adding support for en/es for the content

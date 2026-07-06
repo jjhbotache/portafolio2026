@@ -23,6 +23,9 @@ importers:
       astro-icon:
         specifier: ^1.1.5
         version: 1.1.5
+      astro-swiper:
+        specifier: ^2.7.1
+        version: 2.7.1
       gsap:
         specifier: ^3.14.2
         version: 3.14.2
@@ -884,6 +887,10 @@ packages:
 
   astro-icon@1.1.5:
     resolution: {integrity: sha512-CJYS5nWOw9jz4RpGWmzNQY7D0y2ZZacH7atL2K9DeJXJVaz7/5WrxeyIxO8KASk1jCM96Q4LjRx/F3R+InjJrw==}
+
+  astro-swiper@2.7.1:
+    resolution: {integrity: sha512-emUShiQ6VH1DJloDtiPYsZqvnsQFtaQU4TitlplYta4t3VmtYGZktSBH3m+pBJplVG6d6RjiQ1/lF0t8Ldk4fw==}
+    engines: {node: '>=18', npm: '>=9.6.5', pnpm: '>=7.1.0'}
 
   astro@6.4.2:
     resolution: {integrity: sha512-8H89CH2dKL5SCU99OCqdU9BGjmPkSJqaPurywj5XMo7eMFGUFD3vsNhdEKnEh4mK4LgGje3/QDTTSIIGst0G0Q==}
@@ -3003,6 +3010,10 @@ snapshots:
       '@iconify/utils': 2.3.0
     transitivePeerDependencies:
       - supports-color
+
+  astro-swiper@2.7.1:
+    dependencies:
+      swiper: 12.2.0
 
   astro@6.4.2(@types/node@25.9.1)(jiti@2.6.1)(lightningcss@1.31.1)(rollup@4.59.0)(yaml@2.9.0):
     dependencies:

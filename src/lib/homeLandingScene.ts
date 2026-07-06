@@ -5,10 +5,12 @@ import { CatmullRomCurve3, MathUtils, Vector3, Camera, Group } from 'three';
 import { fadeOutDisk, fadeInDisk } from './three/homeLandingDisk';
 import { fadeOutFloor, fadeInFloor, preloadLandingEnvironment, loadLandingEnvironment } from './three/homeLandingEnvironment';
 import { sections } from './sections';
-import { revealActiveSectionTitle, resetActiveSectionTitle } from './textReveal';
 import { detectGpuCapabilities  } from './gpuCapabilities';
 import * as THREE from 'three';
 import type { Lang } from '../i18n/utils';
+
+
+const cameraTargetYPosition = 1.5;
 
 // Detect GPU capability once per page load. The score decides between
   // the heavy (masked + pinned) entrance timeline and a lightweight
@@ -252,11 +254,12 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
       startTutorialIfNeeded(landingScene.overlay);
       document.removeEventListener('click', skipAnimation);
       window.scrollTo(0, scrollerPos);
+      
     },
   });
 
   const skipAnimation = () => {
-    tl.progress(0.85);
+    tl.progress(1);
   };
   document.addEventListener('click', skipAnimation);
 
@@ -264,7 +267,7 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
     new Vector3(landingScene.camera.position.x, landingScene.camera.position.y, landingScene.camera.position.z),
     new Vector3(0, 8, 2),
     new Vector3(-4, 6, 0),
-    new Vector3(-7, 3.5, 0),
+    new Vector3(-4, 3, 0),
   ];
 
   const cameraPathCurve = new CatmullRomCurve3(cameraPathAnchors, false, 'catmullrom', 0.6);
@@ -304,6 +307,12 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
     keyframes: cameraKeyframes,
   },'-=.3' );
   
+  tl.fromTo(landingScene.controls.target,
+    { x: 0, y: 0, z: 0, },
+    { x: 0, y: cameraTargetYPosition, z: 0,
+    duration: 2,
+    ease: 'sine.out',
+  }, '<');
 }
 
 function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement) {
@@ -408,6 +417,8 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       // hide the overflow of the html body
       document.body.style.overflowY = 'hidden';
       
+      
+      
       // Agregar luz direccional en la posición de la cámara
       detailViewLight = new THREE.DirectionalLight(0x68d9ff, 40);
       detailViewLight.position.copy(landingScene.camera.position);
@@ -421,6 +432,8 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       landingScene.controls.dampingFactor = 0.002;
 
       const tl = gsap.timeline();
+      // reset the camera target to keep models well framed 
+      tl.to(landingScene.controls.target, { x: 0, y: 0, z: 0, duration: 0.3, ease: 'power3.inOut' }, 0);
 
       // Fade out background environment (use module helpers)
       const floorTween = fadeOutFloor(0.2);
@@ -542,8 +555,10 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
         // if in the especific group, override the rotation and position
         console.log("group id", group.id);
         
-        if (group.id === 19) { // mountain
-          // do nothing
+        if (group.id === 22) { // mountain
+          rotationX += MathUtils.degToRad(-7);
+          localTarget.z -= 20;
+          localTarget.y -= 20;
         }
         if (group.id === 25) { // cube gear
           // do nothing
@@ -552,10 +567,11 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
           // do nothing
           // rotate the hands to face the camera
           rotationY += MathUtils.degToRad(45); 
+          rotationX += MathUtils.degToRad(-45); 
           localTarget.z += 40;
           localTarget.x += 170;
         }
-        if (group.id === 21) { // thinking man
+        if (group.id === 24) { // thinking man
           firstThinkingManRotationY = targetGroup.children[0].rotation.y;
           
           localTarget.y -= 20;
@@ -579,7 +595,7 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       // Dynamically move and orient both groups
       moveAndOrientGroup(activeBackdropGroup, modelAnchor,{
         move:{x: -50},
-        rotate:{y: MathUtils.degToRad(-45),x: MathUtils.degToRad(-7)}
+        rotate:{y: MathUtils.degToRad(-45),x: MathUtils.degToRad(-7)},
       }); // move backdrop to model anchor with some offset
 
       // Show HTML layout (the wrapper was already unhidden above so the
@@ -589,6 +605,8 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
         showActiveDetailView(activeSection.htmlDetailViewSelector);
       }
       tl.to(detailOverlay, { opacity: 1, display: 'grid', pointerEvents: 'auto', duration: 0.2 }, "<");
+      
+      
 
       // After the fade-in finishes, run the section's entry animations
       // (typing, marquee, ScrollTrigger refresh, ...). We wait a tick to
@@ -601,7 +619,6 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
         // Reveal the section's title letter-by-letter.
         if (activeSection) {
           const sectionRoot = document.querySelector<HTMLElement>(activeSection.htmlDetailViewSelector);
-          revealActiveSectionTitle(sectionRoot);
           // Trigger section-specific entry hooks (typing, etc.).
           getSectionHooks(activeSection.id).start?.();
         }
@@ -633,6 +650,8 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
           landingScene.controls.dampingFactor = 0.06;
         }
       });
+      // Reset the camera target to the default position 
+      tl.to(landingScene.controls.target, { x: 0, y: cameraTargetYPosition, z: 0, duration: 0.3, ease: 'power3.inOut' }, "<");
       
       tl.to(detailOverlay, { opacity: 0, display: 'none', pointerEvents: 'none', duration: 0.3 }, 0);
       hideAllDetailViews();
@@ -649,8 +668,6 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       const closeBtn = previousRoot?.querySelector<HTMLElement>('#detail-close');
       if (closeBtn) closeBtn.classList.add('hidden');
       if (previousSection) {
-        const sectionRoot = document.querySelector<HTMLElement>(previousSection.htmlDetailViewSelector);
-        resetActiveSectionTitle(sectionRoot);
         getSectionHooks(previousSection.id).stop?.();
       }
 
@@ -658,6 +675,8 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       if (floorInTween) tl.add(floorInTween, 0.2);
       const diskInTween = fadeInDisk(0.3);
       if (diskInTween) tl.add(diskInTween, 0.2);
+      
+      
 
       if (activeBackdropGroup) {
         tl.to(activeBackdropGroup.position, { x: 0, y: 0, z: 0, duration: 0.8, ease: 'power3.inOut' }, 0.1);
@@ -689,6 +708,8 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
           }
         });
       }
+      
+      
 
     }
   };

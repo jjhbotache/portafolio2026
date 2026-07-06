@@ -205,6 +205,7 @@ for (const proj of projects) {
 <script>
   import { gsap } from 'gsap';
   import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  import { playInkBleed } from '../../lib/sectionTitleReveal';
 
   gsap.registerPlugin(ScrollTrigger);
 
@@ -500,6 +501,10 @@ for (const proj of projects) {
   const startProjects = () => {
     const root = document.querySelector<HTMLElement>('#detail-overlay')!;
     setupProjects(root);
+
+    // "Ink Bleed" reveal on the section title.
+    const title = root.querySelector<HTMLElement>('h2[data-section-id="projects"]');
+    playInkBleed(title);
 
     // Tear down any prior handle (close -> open flow).
     if (projectsHandle) {

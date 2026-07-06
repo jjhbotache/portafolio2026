@@ -1,8 +1,6 @@
 @import "tailwindcss";
-:root {
-  --landing-mask-size: 500%;
-  --mask-pos: 50% 64%;
-}
+
+
 
 
 ::view-transition-old(root) {
@@ -27,11 +25,18 @@ html, body {
   width: 100% !important;
 }
 
-@theme {
+@theme  {
   --color-primary: #0065ca;
   --color-secondary: #00b5e8;
   --color-tertiary: #9f20e1;
   --font-tron: 'Tron', system-ui, sans-serif;
+  --font-8bit: '8bit', monospace;
+  
+}
+:root{
+  /* swiper */
+  --swiper-theme-color: #9f20e1 !important;
+  --swiper-pagination-bullet-inactive-color: #fff;
 }
 
 /* Tron font used by the section titles */
@@ -42,10 +47,13 @@ html, body {
   font-style: normal;
   font-display: swap;
 }
-/* Tron font used by the section titles */
 @font-face {
   font-family: '8bit';
   src: url('/fonts/8bit.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'PixeloidSans';
+  src: url('/fonts/PixeloidSans.ttf') format('truetype');
 }
 
 .tron-font {
@@ -57,68 +65,8 @@ html, body {
   font-family: '8bit', monospace;
 }
 
-/* Letters created by textReveal.ts - hidden until the reveal animation runs */
-.tron-letter {
-  display: inline-block;
-  opacity: 0;
-  transform: translateY(0.6em);
-  will-change: opacity, transform;
-}
-
-/* When the element has data-revealed="true", letters are in their final state */
-[data-revealed="true"] .tron-letter,
-.tron-letters-revealed .tron-letter {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Caret used by the typing effect in the about-me section */
-.typing-caret::after {
-  content: '|';
-  display: inline-block;
-  margin-left: 0.05em;
-  color: currentColor;
-  animation: typing-caret-blink 1s steps(1) infinite;
-}
-
-@keyframes typing-caret-blink {
-  0%, 50% {
-    opacity: 1;
-  }
-  50.01%, 100% {
-    opacity: 0;
-  }
-}
-
-.masked {
-  position: relative;
-  overflow: hidden;
-  --hero-before-opacity: 0;
-  -webkit-mask-image: url('/sparks2.svg');
-  mask-image: url('/sparks2.svg');
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: var(--landing-mask-size) ;
-  mask-size:  var(--landing-mask-size);
-  -webkit-mask-position: var(--mask-pos);
-  mask-position: var(--mask-pos);
-  
-  
-}
-
-.masked::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-color: var(--color-secondary);
-  opacity: var(--hero-before-opacity);
-  pointer-events: none;
-  z-index: 2;
-}
-
-.masked > * {
-  position: relative;
-  z-index: 1;
+.pixel-font {
+  font-family: 'PixeloidSans', monospace;
 }
 
 .hide-scrollbar {
@@ -126,108 +74,3 @@ html, body {
   -ms-overflow-style: none; /* Internet Explorer 10+ */
 }
 
-/* Technology marquee rows rendered in the About Me section. Each row has a
-   small label on the left, a fade-masked track on the right and the icons
-   inside are duplicated by the Astro template so the GSAP loop is seamless. */
-.tech-marquee-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  width: 100%;
-}
-
-.tech-marquee-label {
-  flex-shrink: 0;
-  font-family: var(--font-tron);
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--color-secondary);
-  min-width: 5.5rem;
-  text-align: right;
-  opacity: 0.85;
-}
-
-.tech-marquee-label--front { color: var(--color-secondary); }
-.tech-marquee-label--back  { color: var(--color-tertiary); }
-.tech-marquee-label--others { color: var(--color-primary); }
-
-.tech-marquee-mask {
-  position: relative;
-  flex: 1 1 auto;
-  overflow: hidden;
-  /* Soft fade on both edges so icons don't pop in/out harshly. */
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    black 8%,
-    black 92%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    black 8%,
-    black 92%,
-    transparent 100%
-  );
-}
-
-.tech-marquee-track {
-  display: flex;
-  align-items: center;
-  gap: 2.25rem;
-  width: max-content;
-  white-space: nowrap;
-  will-change: transform;
-}
-
-.tech-marquee-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.85rem;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.85);
-  text-decoration: none;
-  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.25s ease;
-}
-
-.tech-marquee-item:hover {
-  background: rgba(0, 181, 232, 0.15);
-  border-color: rgba(0, 181, 232, 0.45);
-  color: var(--color-secondary);
-  transform: translateY(-2px);
-}
-
-.tech-marquee-icon {
-  width: 1.75rem;
-  height: 1.75rem;
-  flex-shrink: 0;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-}
-
-.tech-marquee-name {
-  font-size: 0.85rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-}
-
-@media (max-width: 640px) {
-  .tech-marquee-row {
-    gap: 0.5rem;
-  }
-  .tech-marquee-label {
-    min-width: 4rem;
-    font-size: 0.6rem;
-  }
-  .tech-marquee-icon {
-    width: 1.4rem;
-    height: 1.4rem;
-  }
-  .tech-marquee-name {
-    font-size: 0.75rem;
-  }
-}

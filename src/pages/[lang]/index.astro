@@ -19,6 +19,45 @@ const descriptionByLang: Record<Lang, string> = {
   en: 'Interactive portfolio built with Astro, Three.js and GSAP.',
   es: 'Portafolio interactivo construido con Astro, Three.js y GSAP.',
 };
+
+const exp = {
+  id: 'dpagos',
+  title: 'Plataforma Dpagos',
+  period: 'Mar 2025 — Abr 2025',
+  description: 'Plataforma de puntos de venta para lotería con React, TypeScript, FastAPI y SQLAlchemy.',
+  contentHtml: '<p><strong>Desarrollé</strong> esta plataforma que permite a usuarios puntos de venta vender lotería utilizando el servicio de Billuyo y a un administrador, manejar puntos de venta, su saldo, sus solicitudes de saldo y demás. Se creó utilizando <strong>React</strong> con <strong>TypeScript</strong> para el frontend y <em>FastAPI</em> con <em>SQLAlchemy</em> para el backend. Implementé interfaces modernas con Shadcn, Recharts y Tailwind.</p>\n',
+  technologies: [
+    'React',
+    'TypeScript',
+    'FastAPI',
+    'Shadcn',
+    'Recharts',
+    'SQLAlchemy',
+    'Tailwind'
+  ],
+  imgs: [
+    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Captura_de_pantalla_2025-04-17_155832_l4oywu_befdsq.png',
+    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Captura_de_pantalla_2025-04-17_155942_sw3cfo_xy7q0t.png',
+    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Captura_de_pantalla_2025-04-17_160011_bxkqzo_psnbic.png',
+    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/dpagos_uj37xt.png',
+    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Screenshot_24_xiqgar_hckrzw.png',
+    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Screenshot_23_ydrxt2_opzixd.png',
+    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945607/Screenshot_25_k190iv_xgdk3d.png'
+  ],
+  periodByLang: { es: 'Mar 2025 — Abr 2025', en: 'Mar 2025 — Apr 2025' },
+  enterprises: [
+    {
+      name: 'Billuyo',
+      logo: 'https://billuyo.com.co/favicon.png',
+      url: 'https://billuyo.com.co'
+    },
+    {
+      name: 'Dpagos',
+      logo: 'https://dpagos-platform-front.vercel.app/logo.svg',
+      url: 'https://dpagos-platform-front.vercel.app'
+    }
+  ]
+}
 ---
 <Layout title={titleByLang[lang]} description={descriptionByLang[lang]} lang={lang}>
   <LanguageToggle />
@@ -29,7 +68,7 @@ const descriptionByLang: Record<Lang, string> = {
     >
     <div id="content" class="relative flex items-center justify-end gap-10 h-screen bg-linear-to-br from-gray-900 to-gray-950">
       <div class="basis-3/5 pr-[15em]">
-        <h1 class="bit8-font text-6xl font-bold text-end bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
+        <h1 class="pixel-font tracking-widest font-bold text-6xl  text-end bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
           Juan Jose Huertas
         </h1>
       </div>
@@ -50,7 +89,6 @@ const descriptionByLang: Record<Lang, string> = {
     </div>
     
   </div>
-  <div class="h-px"></div>
   
   <div id="three-overlay" aria-hidden="true">
     <div id="tutorial-overlay" aria-hidden="true">
@@ -73,10 +111,47 @@ const descriptionByLang: Record<Lang, string> = {
     <ProjectsDetail lang={lang} />
   </div>
   
+  <!-- dev -->
+  <!-- <div class="h-[60vh] w-full absolute top-0 left-0 bg-white">
+  </div> -->
 
 </Layout>
 
 <style>
+  /* Hero mask used by the landing section. Drives the SVG sparks mask,
+     its size/position and the secondary-color overlay opacity. The custom
+     properties are mutated at runtime by `homeLandingScene.ts`. */
+  .masked {
+    position: relative;
+    overflow: hidden;
+    --landing-mask-size: 500%;
+    --mask-pos: 50% 64%;
+    --hero-before-opacity: 0;
+    -webkit-mask-image: url('/sparks2.svg');
+    mask-image: url('/sparks2.svg');
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: var(--landing-mask-size);
+    mask-size: var(--landing-mask-size);
+    -webkit-mask-position: var(--mask-pos);
+    mask-position: var(--mask-pos);
+  }
+
+  .masked::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--color-secondary);
+    opacity: var(--hero-before-opacity);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .masked > * {
+    position: relative;
+    z-index: 1;
+  }
+
   #content, .hero-mask {
     will-change: transform, opacity, -webkit-mask-size, mask-size;
   }

@@ -7,6 +7,8 @@
 // as the user scrolls down, stacking in the viewport.
 import { getCollection } from 'astro:content';
 import { marked } from 'marked';
+import { Icon } from 'astro-icon/components';
+import { Swiper, SwiperWrapper, SwiperSlide, SwiperPagination } from 'astro-swiper';
 import { resolveBilingual, t, type Lang } from '../../i18n/utils';
 
 interface Props { lang: Lang }
@@ -31,6 +33,13 @@ interface ResolvedExperience {
   imgs: string[];
   periodByLang: { es: string; en: string };
   enterprises: { name: string; logo: string; url: string }[];
+  // Unique pagination class per card. Swiper 12's default `pagination.el`
+  // is the bare tag name `swiper-pagination` (no dot), so astro-swiper's
+  // `<div class="swiper-pagination">` is never picked up automatically
+  // and the bullets never initialize. We need a per-card unique class so
+  // (a) Swiper finds the right element, and (b) bullets don't leak across
+  // the multiple swipers rendered on this page.
+  paginationClass: string;
 }
 
 const buildPeriod = (exp: typeof experiences[number], monthList: string[]) =>
@@ -60,6 +69,7 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
     imgs: exp.data.imgs,
     periodByLang: { es: periodEs, en: periodEn },
     enterprises,
+    paginationClass: `swiper-pagination-${exp.id}`,
   };
 });
 ---
@@ -69,12 +79,12 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
      parent (#detail-overlay) grid when the section is active. -->
 <div
   id="experienceDetailRoot"
-  class="contents hidden "
+  class="contents pixel-font "
   data-section-detail
   data-section-id="experience"
 >
 <h2
-  class="col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-5xl tron-font text-secondary pointer-events-auto"
+  class="col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-7xl tron-font text-secondary pointer-events-auto "
   data-lang={lang}
   data-section-id="experience"
   data-section-detail
@@ -91,78 +101,120 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
     class="experience-content max-h-full h-full sticky top-0"
   >
     <div class="experience-track relative w-full h-full overflow-hidden ">
+      
       {resolvedExperiences.map((exp) => (
-        <article
-          class="experience-card absolute inset-y-0 left-20 h-[90%]  w-[70vw] md:w-[60vw] max-w-3xl rounded-2xl border border-white/15 bg-tertiary backdrop-blur-md p-6 flex flex-col md:flex-row gap-6 shadow-lg shadow-black/30"
-          data-card-id={exp.id}
-          data-period-es={exp.periodByLang.es}
-          data-period-en={exp.periodByLang.en}
-        >
-          <div class="md:w-2/5 flex flex-col gap-3 overflow-y-auto pr-2">
-            <h3 class="text-2xl font-bold leading-tight">{exp.title}</h3>
-            <div class="flex flex-wrap items-center gap-3">
-              {exp.enterprises.map((ent) => (
-                <a
-                  href={ent.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="flex items-center gap-2 text-sm text-white/80 hover:text-secondary transition-colors"
-                >
-                  <img
-                    src={ent.logo}
-                    alt={ent.name}
-                    class="w-6 h-6 rounded-sm bg-white/10"
-                    loading="lazy"
-                  />
-                  <span>{ent.name}</span>
-                </a>
-              ))}
-            </div>
-            <p
-              class="text-sm text-white/60 italic"
-              data-period-display
-            >{exp.period}</p>
-            <p class="text-sm text-white/80 leading-relaxed">
-              {exp.description}
-            </p>
-            <div class="flex flex-wrap gap-1.5">
-              {exp.technologies.map((tech) => (
-                <span class="text-xs px-2 py-1 rounded-full bg-secondary/15 text-secondary border border-secondary/30">
-                  {tech}
-                </span>
-              ))}
-            </div>
-            <div class="mt-2 text-sm text-white/70 leading-relaxed prose prose-invert max-w-none" set:html={exp.contentHtml} />
-          </div>
-          <div class="md:w-3/5 relative rounded-xl overflow-hidden bg-black/40 min-h-65">
-            {exp.imgs.length > 0 ? (
-              <div
-                class="swiper h-full"
-                data-swiper-id={exp.id}
-              >
-                <div class="swiper-wrapper h-full">
-                  {exp.imgs.map((src) => (
-                    <div class="swiper-slide">
-                      <img
-                        src={src}
-                        alt={exp.title}
-                        class="w-full h-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
+      <article
+            class="experience-card absolute inset-y-0 left-20 h-[90%]  w-[70vw] md:w-[60vw] max-w-3xl p-6 flex flex-col md:flex-row gap-6 
+            bg-linear-to-br from-primary to-blue-950 to-80% 
+            overflow-hidden 
+            "
+            data-card-id={exp.id}
+            data-period-es={exp.periodByLang.es}
+            data-period-en={exp.periodByLang.en}
+          >
+            <div class="md:w-2/5 flex flex-col justify-center gap-3 overflow-y-auto pr-2">
+              <h3 class="text-2xl font-bold leading-tight">{exp.title}</h3>
+              <div class="flex flex-wrap items-center gap-3">
+                {exp.enterprises.map((ent) => (
+                  <a
+                    href={ent.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex items-center gap-2 text-sm text-white/80 hover:text-secondary transition-colors underline"
+                  >
+                    <img
+                      src={ent.logo}
+                      alt={ent.name}
+                      class="w-6 h-6 rounded-sm "
+                      loading="lazy"
+                    />
+                    <span>{ent.name}</span>
+                  </a>
+                ))}
+              </div>
+              <div class="group ">
+                <p class="text-sm text-white/60 italic" data-period-display >{exp.period}</p>
+                <p class="text-sm text-white/80 leading-relaxed">
+                  {exp.description}
+                  <span class="underline bold transition-all duration-300
+                  group-hover:opacity-0 ">
+                  {t(lang, 'experience.viewMore')+". . ."}</span>
+                </p>
+                 <div class="experience-data-overlay
+                  translate-y-full absolute bottom-0 left-0 w-full p-4 bg-black/50 backdrop-blur-sm flex-col gap-2 opacity-0 z-10
+                  transition-all duration-300              
+                  group-hover:flex group-active:flex
+                  group-hover:translate-y-0 group-active:translate-y-0
+                  group-hover:opacity-100 group-active:opacity-100
+                  ">
+                    <div class="flex flex-wrap gap-1.5">
+                    {exp.technologies.map((tech, i) => (
+                      <span class={`text-xs px-2 py-1 rounded-full bg-secondary/15 text-secondary border border-secondary/30
+                      opacity-0
+                      group-hover:opacity-100 group-active:opacity-100
+                      transition-opacity duration-150 
+                      `}
+                      style={`transition-delay: ${300 + (i*50)}ms;`}
+                      >
+                        {tech}
+                      </span>
+                    ))}
                     </div>
-                  ))}
+                    <div class="mt-2 text-sm text-white/70 leading-relaxed prose prose-invert max-w-none" set:html={exp.contentHtml} />
+                  </div>
+              </div>
+            </div>
+            <!-- slider -->
+            <div class="md:w-3/5 relative rounded-xl overflow-hidden bg-black/40 min-h-65 ">
+              {exp.imgs.length > 0 ? (
+                <Swiper
+                  class="h-full"
+                  options={{
+                    direction: 'horizontal',
+                    loop: true,
+                    grabCursor: true,
+                    pagination: {
+                      el: `.${exp.paginationClass}`,
+                      clickable: true,
+                    },
+                  }}
+                >
+                  <SwiperWrapper class="h-full">
+                    {exp.imgs.map((src) => (
+                      <SwiperSlide class="aspect-video bg-linear-to-br from-black/40 via-bg-black/5 to-black/40">
+                        <img
+                          src={src}
+                          alt={exp.title}
+                          class="w-full h-full object-contain object-center"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </SwiperSlide>
+                    ))}
+                  </SwiperWrapper>
+                  <SwiperPagination class={exp.paginationClass} />
+                </Swiper>
+              ) : (
+                <div class="w-full h-full flex items-center justify-center text-white/40 text-sm">
+                  {noImagesLabel}
                 </div>
-                <div class="swiper-pagination"></div>
-              </div>
-            ) : (
-              <div class="w-full h-full flex items-center justify-center text-white/40 text-sm">
-                {noImagesLabel}
-              </div>
-            )}
-          </div>
-        </article>
+              )}
+            </div>
+      </article>
       ))}
+      
+      <div
+        id="experienceScrollTutorial"
+        class="absolute right-50 bottom-50 z-20 flex flex-col items-center gap-1 pointer-events-none transition-opacity duration-300 opacity-0"
+        aria-hidden="true"
+      >
+        <span class="text-xs text-white/90 pixel-font whitespace-nowrap">
+          {t(lang, 'sections.experience.scrollDown')}
+        </span>
+        <span class="exp-tutorial-icon flex items-center justify-center">
+          <Icon name="downArrow" class="exp-cursor-icon w-12 h-12 text-secondary animate-bounce" />
+      </span>
+      </div>
     </div>
     <!-- add space to make it scrollable -->
     <div id="experienceSpacer"></div>
@@ -178,35 +230,15 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
     data-i18n-attr={`aria-label:ui.closeDetailAria`}
   >&lsaquo;</button>
 </div>
-
 <script>
-  import Swiper from 'swiper';
-  import { Pagination } from 'swiper/modules';
-  import 'swiper/css';
-  import 'swiper/css/pagination';
   import { ScrollTrigger } from 'gsap/ScrollTrigger';
   import { gsap } from 'gsap';
+  import { playInkBleed } from '../../lib/sectionTitleReveal';
 
   gsap.registerPlugin(ScrollTrigger);
 
-  // Initialize every Swiper inside the experience section.
-  // Each card has its own vertical slider with clickable pagination.
-  const initExperienceSwipers = (root: HTMLElement) => {
-    const swipers = root.querySelectorAll<HTMLElement>('[data-swiper-id]');
-    swipers.forEach((el) => {
-      new Swiper(el, {
-        direction: 'vertical',
-        modules: [Pagination],
-        pagination: {
-          el: el.querySelector('.swiper-pagination') as HTMLElement,
-          clickable: true,
-        },
-        mousewheel: true,
-        grabCursor: true,
-        loop: true,
-      });
-    });
-  };
+  // Swipers are auto-initialized by the <astro-swiper> custom element, so
+  // no manual `new Swiper(...)` calls are required here.
 
   // Drive a horizontal track with vertical scroll using a GSAP timeline.
   // The timeline owns the tween (track x) and the ScrollTrigger, so callers
@@ -250,12 +282,6 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
       ? Math.min(desiredOffset, maxStackWidth / (numCards - 1))
       : 0;
 
-    // Initial state: card[0] visible at the front, others off-screen to the right.
-    // DOM order sets z-index so the newest card is always rendered on top.
-
-    // cards.slice(1).forEach((card, i) => {
-    //   gsap.set(card, { x:  10000 });
-    // });
 
     const STEP_DURATION = 1;
     const totalDuration = Math.max(0, (numCards - 1) * STEP_DURATION);
@@ -292,6 +318,12 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
         { x: 0, duration: STEP_DURATION },
         segmentTime,
       );
+
+      // Anchor point used by ScrollTrigger snap. By the time we reach
+      // `segmentTime + STEP_DURATION` the new card has finished sliding in
+      // and the previous ones have settled into their stacked position,
+      // so this is a natural resting point for the animation.
+      timeline.addLabel(`card-${k}`, segmentTime);
     }
 
     // One viewport of scroll per card transition.
@@ -302,7 +334,14 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
       trigger: content,
       start: 'top top',
       end: () => `+=${getScrollDistance()}`,
-      scrub: 0.6,
+      scrub: true,
+      // Snap the timeline to each card label when the user stops scrolling
+      // so the view never rests halfway between two projects.
+      snap: {
+        snapTo: 'labels',
+        duration: 0.3,
+        ease: 'power1.inOut',
+      },
       animation: timeline,
     });
 
@@ -338,15 +377,15 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
     });
   };
 
-  // Setup: Swipers + language observer. The scroll timeline is built lazily
-  // (in startExperience) so the distance is measured with the section
-  // actually visible, otherwise `scrollWidth` is 0 because the parent grid
-  // item is hidden.
+  // Setup: language observer and ScrollTrigger refresh. The scroll timeline
+  // is built lazily (in startExperience) so the distance is measured with
+  // the section actually visible, otherwise `scrollWidth` is 0 because the
+  // parent grid item is hidden. Swipers are auto-initialized by the
+  // <astro-swiper> custom element, so no manual init is required here.
   const setupExperience = (root: HTMLElement) => {
     if (root.dataset.experienceInit === 'true') return;
     root.dataset.experienceInit = 'true';
 
-    initExperienceSwipers(root);
     applyExperienceLang(root);
 
     const observer = new MutationObserver(() => applyExperienceLang(root));
@@ -365,9 +404,54 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
   // distance is computed with the section visible.
   let experienceHandle: ExperienceAnimationHandle | null = null;
 
+  // Scroll-down tutorial overlay. Shows the "scroll down" hint at most
+  // MAX_TUTORIAL_SHOWS times across visits (tracked in localStorage) and
+  // auto-hides on the first scroll within the experience detail overlay.
+  const LANDING_TUTORIAL_KEY = 'landing_tutorial_shown_count';
+  const MAX_TUTORIAL_SHOWS = 2;
+
+  const setupScrollTutorial = () => {
+    const tutorial = document.querySelector<HTMLElement>('#experienceScrollTutorial');
+    if (!tutorial) return;
+
+    const shownCount = Number(localStorage.getItem(LANDING_TUTORIAL_KEY) ?? '0');
+    // if (shownCount > MAX_TUTORIAL_SHOWS) {
+    //   tutorial.classList.add('opacity-0');
+    //   tutorial.classList.remove('opacity-100');
+    //   return;
+    // }
+
+    // Increment counter and reveal the tutorial with a fade.
+    localStorage.setItem(LANDING_TUTORIAL_KEY, String(shownCount + 1));
+    tutorial.classList.remove('opacity-0');
+    tutorial.classList.add('opacity-100');
+
+    // Hide on the first scroll inside the experience detail overlay
+    // (the same scroller that drives the horizontal card animation).
+    const wrapper = document.querySelector<HTMLElement>('#experienceDetailedView');
+    if (!wrapper) return;
+
+    wrapper.addEventListener(
+      'scroll',
+      () => {
+        tutorial.classList.remove('opacity-100');
+        tutorial.classList.add('opacity-0');
+      },
+      { passive: true, once: true },
+    );
+  };
+
   const startExperience = () => {
     const root = document.querySelector<HTMLElement>('#detail-overlay')!;
     setupExperience(root );
+
+    // "Ink Bleed" reveal on the section title.
+    const title = root.querySelector<HTMLElement>('h2[data-section-id="experience"]');
+    playInkBleed(title);
+
+    // Show the scroll-down tutorial if the user hasn't seen it too many
+    // times already (gated by localStorage).
+    setupScrollTutorial();
 
     // Tear down any prior handle (close -> open flow).
     if (experienceHandle) {
@@ -405,3 +489,36 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
     stop: stopExperience,
   };
 </script>
+
+<style>
+  .experience-card {
+    border: 2px solid #000;
+    box-shadow: .5em 1em 0 #000;
+    transition:
+      transform 0.3s ease,
+      box-shadow 0.3s ease;
+  }
+  .experience-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 1px,
+      transparent 2px
+    );
+  pointer-events: none;
+  opacity: 0.25;
+  }
+  .experience-card:not(:first-child) {
+    transform: translateX(200%);
+  }
+
+  .exp-cursor-icon { display: block; }
+  .exp-tap-icon { display: none; }
+  @media (pointer: coarse) {
+    .exp-cursor-icon { display: none; }
+    .exp-tap-icon { display: block; }
+  }
+</style>

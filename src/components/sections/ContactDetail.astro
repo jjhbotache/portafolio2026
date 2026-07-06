@@ -84,6 +84,7 @@ const { lang } = Astro.props as Props;
 
 <script>
   import { gsap } from 'gsap';
+  import { playInkBleed } from '../../lib/sectionTitleReveal';
 
   // Drive a horizontal marquee. The track is rendered twice (the original
   // items followed by a clone), so translating from 0 to -50% creates a
@@ -132,6 +133,9 @@ const { lang } = Astro.props as Props;
     const root = document.querySelector<HTMLElement>('#contactDetailedView');
     if (!root) return;
     setupContact(root);
+    // "Ink Bleed" reveal on the section title (both language variants so
+    // whichever is visible once applyContactLang runs will bleed in).
+    playInkBleed(root.querySelectorAll<HTMLElement>('h2.tron-font'));
     startMarquee(root);
   };
 

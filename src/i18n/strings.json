@@ -7,6 +7,7 @@
     "ui.closeDetailAria": "Cerrar vista detallada",
     "ui.closeSymbol": "‹",
     "sections.experience.title": "Experiencia",
+    "sections.experience.scrollDown": "Scrollea hacia abajo",
     "sections.aboutMe.title": "Acerca de mi",
     "sections.aboutMe.body": "Soy un desarrollador apasionado por la tecnología y el software. Me encanta simplificar la vida mediante la tecnología y sus mejores prácticas. Es por eso que me he especializado en React.js y Python, tecnologías con las que desarrollar soluciones para la mayoría de problemas es posible.",
     "sections.aboutMe.techs.front": "Frontend",
@@ -23,6 +24,7 @@
     "projects.modal.descriptionLabel": "Descripción",
     "projects.modal.techsLabel": "Tecnologías",
     "experience.noImages": "Sin imágenes",
+    "experience.viewMore": "ver más",
     "months.short": ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
   },
   "en": {
@@ -33,6 +35,7 @@
     "ui.closeDetailAria": "Close detail view",
     "ui.closeSymbol": "‹",
     "sections.experience.title": "Experience",
+    "sections.experience.scrollDown": "Scroll down",
     "sections.aboutMe.title": "About me",
     "sections.aboutMe.body": "I'm a developer passionate about crafting interactive, visually rich web experiences by blending design, animation and clean code. I love simplifying everyday problems through technology and its best practices, which is why I specialize in React.js and Python.",
     "sections.aboutMe.techs.front": "Frontend",
@@ -49,6 +52,7 @@
     "projects.modal.descriptionLabel": "Description",
     "projects.modal.techsLabel": "Technologies",
     "experience.noImages": "No images",
+    "experience.viewMore": "view more",
     "months.short": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
   }
 }
