@@ -7,9 +7,18 @@ import { loadLandingDisk, disposeLandingDisk } from './homeLandingDisk';
 import { createLandingStarField, disposeLandingEnvironment } from './homeLandingEnvironment';
 import { createLandingTitles } from './homeLandingTitles';
 import { configureMaterialAnisotropy, disposeAllTextures } from './materialFactory';
-import type { TitleBackgroundController } from './titlesBackgrounds/types';
 import type { SectionConfig } from '../sections';
 import type { Lang } from '../../i18n/utils';
+
+const bloomResolutionScale = 1/8;
+const pixelRatio = .7;
+export const DETAIL_VIEW_PIXEL_RATIO = 0.2;
+const FPS = 14;
+
+const bloomResolution = {
+  width: window.innerWidth * bloomResolutionScale,
+  height: window.innerHeight * bloomResolutionScale
+};
 
 export type LandingScene = {
   overlay: HTMLElement;
@@ -22,8 +31,12 @@ export type LandingScene = {
   titlesAreVisible: () => boolean;
   titles: ReturnType<typeof createLandingTitles>;
   pauseOrbit: () => void;
+  scheduleOrbitResume: () => void;
+  setAutoRotateSuppressed: (suppressed: boolean) => void;
   getActiveSectionIndex: () => number;
   getActiveSection: () => SectionConfig | undefined;
+  setPixelRatio: (ratio: number) => void;
+  getPixelRatio: () => number;
   dispose: () => void;
 };
 
@@ -42,13 +55,13 @@ const prefersReducedMotion = (): boolean => {
 };
 
 const addLights = (scene: THREE.Scene, helpers = false) => {
-  const keyLight = new THREE.PointLight(0x59a5ff, 80, 30);
-  keyLight.position.set(1.5, 3, 2);
-  scene.add(keyLight);
-  if (helpers) {
-    const keyLightHelper = new THREE.PointLightHelper(keyLight, 0.5);
-    scene.add(keyLightHelper);
-  }
+  // const keyLight = new THREE.PointLight(0x59a5ff, 80, 30);
+  // keyLight.position.set(1.5, 3, 2);
+  // scene.add(keyLight);
+  // if (helpers) {
+  //   const keyLightHelper = new THREE.PointLightHelper(keyLight, 0.5);
+  //   scene.add(keyLightHelper);
+  // }
   
   const directLight = new THREE.DirectionalLight(0x68d9ff, 20);
   directLight.position.set(-8, 5, 1);
@@ -73,6 +86,10 @@ const addLights = (scene: THREE.Scene, helpers = false) => {
 const setupIdleCameraOrbit = (controls: OrbitControls) => {
   const idleDelayMs = 5000;
   let resumeOrbitTimeoutId: number | null = null;
+  // When true, scheduleOrbitResume becomes a no-op and any pending resume
+  // timeout is cancelled. Used by the detail view to keep auto-rotation off
+  // even after the user has been idle for longer than `idleDelayMs`.
+  let suppressed = false;
 
   controls.autoRotate = !prefersReducedMotion();
   controls.autoRotateSpeed = -.2;
@@ -90,6 +107,9 @@ const setupIdleCameraOrbit = (controls: OrbitControls) => {
   };
 
   const scheduleOrbitResume = () => {
+    // Detail view is open: do not arm the resume timer. The orchestrator
+    // will re-enable scheduling once the view is closed.
+    if (suppressed) return;
     clearResumeTimeout();
     if (prefersReducedMotion()) {
       return;
@@ -100,9 +120,20 @@ const setupIdleCameraOrbit = (controls: OrbitControls) => {
     }, idleDelayMs);
   };
 
+  const setSuppressed = (value: boolean) => {
+    suppressed = value;
+    if (value) {
+      // Force the orbit off and drop any in-flight resume timeout so the
+      // detail view stays still even if the user is idle for the full
+      // `idleDelayMs` window.
+      controls.autoRotate = false;
+      clearResumeTimeout();
+    }
+  };
+
   controls.addEventListener('start', pauseOrbit);
   controls.addEventListener('end', scheduleOrbitResume);
-  return pauseOrbit;
+  return { pauseOrbit, scheduleOrbitResume, setSuppressed };
 };
 
 const setupResize = (
@@ -110,11 +141,12 @@ const setupResize = (
   renderer: THREE.WebGLRenderer,
   composer: EffectComposer,
   bloomPass: UnrealBloomPass,
+  getCurrentPixelRatio: () => number,
 ) => {
   const onResize = () => {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio, 2);
+    const dpr = Math.min(window.devicePixelRatio, getCurrentPixelRatio());
 
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -122,7 +154,7 @@ const setupResize = (
     renderer.setSize(width, height);
     composer.setPixelRatio(dpr);
     composer.setSize(width, height);
-    bloomPass.setSize(width, height);
+    bloomPass.setSize(bloomResolution.width, bloomResolution.height);
   };
 
   window.addEventListener('resize', onResize);
@@ -133,17 +165,9 @@ const setupResize = (
 // small +2 steps if the device has headroom. A bigger step causes the loop
 // to skip over the 45-55 FPS zone on mid-range hardware, leaving the user
 // with an unnecessarily choppy experience.
-const TARGET_FPS_FLOOR = 25;
-const TARGET_FPS_CEILING = 60;
-const TARGET_FPS_STEP = 1;
-const HEADROOM_FACTOR = 0.6;
-const FRAME_BUDGET_FOR_FLOOR = 1000 / TARGET_FPS_FLOOR;
-let adaptiveTargetFps = TARGET_FPS_FLOOR;
-let lastFrameTime = 0;
-let lastMeasuredFrameMs = FRAME_BUDGET_FOR_FLOOR;
-let consecutiveFastFrames = 0;
 
-const getFrameDuration = () => 1000 / adaptiveTargetFps;
+const FRAME_BUDGET = 1000 / FPS;
+let lastFrameTime = 0;
 
 const startRenderLoop = (
   controls: OrbitControls,
@@ -169,22 +193,7 @@ const startRenderLoop = (
     }
 
     const now = performance.now();
-    const frameDuration = getFrameDuration();
-    if (now - lastFrameTime >= frameDuration) {
-      const measuredFrameMs = lastFrameTime > 0 ? now - lastFrameTime : frameDuration;
-      lastMeasuredFrameMs = measuredFrameMs;
-
-      // Bump target FPS up when frames are consistently faster than the floor budget.
-      if (measuredFrameMs < FRAME_BUDGET_FOR_FLOOR * HEADROOM_FACTOR) {
-        consecutiveFastFrames += 1;
-        if (consecutiveFastFrames >= 30 && adaptiveTargetFps < TARGET_FPS_CEILING) {
-          adaptiveTargetFps = Math.min(TARGET_FPS_CEILING, adaptiveTargetFps + TARGET_FPS_STEP);
-          consecutiveFastFrames = 0;
-        }
-      } else {
-        consecutiveFastFrames = 0;
-      }
-
+    if (now - lastFrameTime >= FRAME_BUDGET) {
       lastFrameTime = now;
       const elapsedTime = clock.getElapsed();
       animate?.(elapsedTime);
@@ -242,7 +251,7 @@ export const createHomeLandingThreeScene = (
 
   // alpha: false because the background is opaque, saving a composite per frame.
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, .8 ));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatio));
   renderer.setSize(window.innerWidth, window.innerHeight);
   configureMaterialAnisotropy(renderer);
   overlay.appendChild(renderer.domElement);
@@ -251,7 +260,7 @@ export const createHomeLandingThreeScene = (
   composer.addPass(new RenderPass(scene, camera));
 
   const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth*0.000000000000000000001, window.innerHeight*0.000000000000000000001),
+    new THREE.Vector2(bloomResolution.width, bloomResolution.height),
     0.015,
     0.1,
     0.4,
@@ -266,7 +275,7 @@ export const createHomeLandingThreeScene = (
   controls.enablePan = false;
   controls.enableZoom = false;
   controls.target.set(0, 0, 0);
-  const pauseOrbit = setupIdleCameraOrbit(controls);
+  const { pauseOrbit, scheduleOrbitResume, setSuppressed: setAutoRotateSuppressed } = setupIdleCameraOrbit(controls);
 
   const diskRoot = new THREE.Group();
   diskRoot.scale.set(0.03, 0.03, 0.03);
@@ -284,7 +293,31 @@ export const createHomeLandingThreeScene = (
 
   addLights(scene);
   const onResizeRef: { current: (() => void) | null } = { current: null };
-  onResizeRef.current = setupResize(camera, renderer, composer, bloomPass);
+
+  // Mutable pixel ratio used by both the resize handler and the explicit
+  // setPixelRatio API. The detail view drops it temporarily to relieve GPU
+  // load, then restores the default.
+  let currentPixelRatio = pixelRatio;
+
+  const applyPixelRatioNow = () => {
+    const dpr = Math.min(window.devicePixelRatio, currentPixelRatio);
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(width, height);
+    composer.setPixelRatio(dpr);
+    composer.setSize(width, height);
+  };
+
+  const setPixelRatio = (ratio: number) => {
+    if (ratio === currentPixelRatio) return;
+    currentPixelRatio = ratio;
+    applyPixelRatioNow();
+  };
+
+  const getPixelRatio = () => currentPixelRatio;
+
+  onResizeRef.current = setupResize(camera, renderer, composer, bloomPass, getPixelRatio);
 
   const { handleVisibilityChange } = startRenderLoop(controls, composer, onResizeRef, (elapsedTime) => {
     animate(elapsedTime);
@@ -347,8 +380,12 @@ export const createHomeLandingThreeScene = (
     hideTitles: titles.hide,
     titlesAreVisible: titles.areTitlesVisible,
     pauseOrbit,
+    scheduleOrbitResume,
+    setAutoRotateSuppressed,
     getActiveSectionIndex: titles.getActiveSectionIndex,
     getActiveSection: titles.getActiveSection,
+    setPixelRatio,
+    getPixelRatio,
     dispose,
   };
 };

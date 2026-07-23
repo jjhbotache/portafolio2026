@@ -1,0 +1,386 @@
+﻿---
+// Projects detail view. Renders every entry from the `projects` content
+// collection as a glassmorphic square card. Cards are placed in a horizontal
+// track that scrolls horizontally as the user scrolls vertically (GSAP
+// ScrollTrigger pin + scrub). On hover each card reveals a dark overlay
+// with a 2-line description. Click expands the card with a scale animation
+// and shows the full info (video, links, description).
+import { getCollection } from 'astro:content';
+import { resolveBilingual, t, type Lang } from '../../i18n/utils';
+import DetailCloseButton from '../../components/sections/DetailCloseButton.astro';
+import ModelBgAnchor from '../../components/sections/ModelBgAnchor.astro';
+import SectionTitle from '../../components/sections/SectionTitle.astro';
+import ScrollDownTutorial from '../../components/sections/ScrollDownTutorial.astro';
+import { marked } from 'marked';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props as Props;
+
+const projects = await getCollection('projects');
+
+
+
+  
+
+// console.log(JSON.stringify(projects[7]));
+
+---
+
+<!-- Section wrapper: contains the title, content, 3D model anchor and close
+     button. Uses `display: contents` so the children participate in the
+     parent (#detail-overlay) grid when the section is active. -->
+<div
+  id="projectsDetailRoot"
+  class="contents hidden"
+  data-section-detail
+  data-section-id="projects"
+>
+<SectionTitle
+  sectionId="projects"
+  titleKey="sections.projects.title"
+  lang={lang}
+/>
+
+<div
+  id="projectsDetailedView"
+  class="row-start-2 col-span-3 row-span-2 text-white text-center pointer-events-auto overflow-y-auto overflow-x-hidden tiny-scrollbar"
+  data-section-detail
+  data-section-id="projects"
+  data-section-content
+>
+  <div class="projects-content max-h-full h-full sticky top-0 ">
+    <div class="projects-track w-full ">
+      {projects.map((proj, i) => (
+       <article
+          id={`project-${proj.id}`}
+          class="project-card group font-pixeloid text-white bg-gray-900 p-6
+          absolute inset-y-0 left-20 h-[90%] w-[70vw] md:w-[60vw] max-w-3xl rounded-sm 
+          flex flex-col items-center justify-between overflow-hidden
+          "
+          data-card-id={proj.id}
+          data-project-id={proj.id}
+          data-project-video={proj.data.video}
+          aria-label={proj.data.title[lang]}
+          style={`z-index: ${i*2};
+            border: inset white;
+            
+            `}
+        >
+          <div class="flex items-center justify-between text-left gap-10 w-full h-11/12 relative bg-gray-900
+          transform duration-300 transition-all">
+            {/* text */}
+            <div class="flex flex-col justify-center w-2/5 gap-3 basis-full z-10 bg-gray-900/50 overflow-y-hidden h-full
+            group-[.is-expanded]:overflow-y-auto tiny-scrollbar
+            "
+              data-vt="info"
+              style={`view-transition-name: card-info-${proj.id};`}>
+
+
+
+              <h3 class="text-xl font-bold leading-tight">{proj.data.title[lang]}</h3>
+              <!-- add space between paragraphs -->
+              <div class=" overflow-hidden text-xs tiny-scrollbar transition-[height] duration-300 leading-relaxed max-w-prose space-y-4 h-[5em]
+
+              group-[.is-expanded]:h-auto
+              group-[.is-expanded]:overflow-y-auto
+              "
+              style=" interpolate-size: allow-keywords; ">
+                <p class="line-clamp-3 group-[.is-expanded]:line-clamp-none">{proj.data.description[lang]}</p>
+
+                <div class="space-y-4 leading-relaxed max-w-prose group-[.is-expanded]:block hidden"
+                set:html={marked.parse(typeof proj.data.content === 'object' ? proj.data.content[lang] : proj.data.content, { async: false })}  />
+              </div>
+
+
+              <div class="relative group-[.is-expanded]:hidden group-[.is-expanded]:opacity-0 transition-opacity duration-300" >
+                <div class="flex flex-wrap gap-1.5">
+                  {proj.data.technologies[lang].map((tech) => (
+                    <span class="text-[.8em] px-2 py-0.5 rounded-full bg-secondary/15 text-secondary border border-secondary/30" >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+
+                {/* text hidders */}
+                <div class={`absolute -bottom-2 w-full h-[200%] pointer-events-none  bg-linear-to-t
+                from-gray-900  via-gray-900/60 to-transparent to-100%
+                transition-all duration-300 transform
+                group-hover:scale-y-50 group-hover:translate-y-15
+
+                group-[.is-expanded]:hidden
+                `} aria-hidden="true" style={`z-index: ${i+1};`}/>
+                <div class={`absolute h-4 w-full -bottom-1 pointer-events-none  bg-linear-to-t  from-gray-900  via-gray-900/80 to-transparent to-100% group-[.is-expanded]:hidden `} aria-hidden="true" style={`z-index: ${i+1};`}/>
+              </div>
+
+            </div>
+
+            {/* media */}
+            <div class="flex flex-col basis-full gap-6 overflow-hidden rounded-lg "
+              data-vt="media" >
+              <div class="basis-full relative aspect-video w-full rounded-lg overflow-hidden bg-black/50 z-10
+              ">
+                <video
+                  src={proj.data.video}
+                  class="w-full h-full object-cover absolute inset-0 transition-opacity duration-300
+                  group-[.is-expanded]:opacity-100
+                  "
+                  style={`view-transition-name: card-media-${proj.id};`}
+                  muted
+                  playsinline
+                  loop
+                  preload="metadata"
+                  autoplay
+                  controls
+                />
+                <img
+                  src={proj.data.img}
+                  alt={t(lang, 'projects.card.coverAlt', { title: proj.data.title[lang] })}
+                  class="absolute inset-0 w-full h-full object-cover transition-opacity duration-300
+                  group-[.is-expanded]:opacity-0  group-[.is-expanded]:hidden"
+                  style={`view-transition-name: card-media-${proj.id};`}
+
+                  loading="lazy"
+                  decoding="async"
+                  fetchpriority="low"
+                />
+                <div class="absolute top-1 right-1 bg-black/60 text-white/80 text-[10px] px-1.5 py-0.5 rounded opacity-0 transition-opacity duration-300
+                group-[.is-expanded]:opacity-100">
+                  VIDEO
+                </div>
+              </div>
+
+              <div class="basis-full relative h-16 hidden opacity-0 transition-opacity duration-300  group-[.is-expanded]:block group-[.is-expanded]:opacity-100
+              " >
+                <div class="flex flex-wrap justify-end gap-1.5 overflow-x-auto tiny-scrollbar">
+                  {proj.data.technologies[lang].map((tech) => (
+                    <span class="text-[.8em] px-2 py-0.5 rounded-full bg-secondary/15 text-secondary border border-secondary/30" >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* separator */}
+          <div class="w-4/5 h-px bg-linear-to-r from-transparent via-white/30 to-transparent my-2 transform transition-all duration-300
+          group-hover:via-white/50 group-hover:w-full
+          group-[.is-expanded]:hidden
+          "/>
+
+          {/* expand button */}
+          <div
+          onclick={`document.startViewTransition(()=>document.getElementById('project-${proj.id}').classList.toggle('is-expanded'))`}
+          class="w-full h-1/12 flex justify-center items-center group-hover:opacity-50 transition-opacity duration-300 text-xs text-white/60 cursor-pointer
+          hover:opacity-100 hover:text-white/80 " >
+            <span class="block group-[.is-expanded]:hidden">click for more!</span>
+            <span class="hidden group-[.is-expanded]:block">click to collapse!</span>
+
+          </div>
+
+
+    </article>
+      ))}
+    </div>
+    <ScrollDownTutorial
+      lang={lang}
+      sectionId="projects"
+      storageKey="projects_tutorial_showns"
+      maxShowTimes={0}
+    />
+  </div>
+  <!-- Spacer must live OUTSIDE the sticky `.projects-content`. Otherwise its
+       height is trapped inside the sticky box and the wrapper can't actually
+       reach `scrollDistance` of scroll, so scrub never hits progress = 1. -->
+  <div id="projectsSpacer"></div>
+  <!-- 3D model anchor and close button shared by every detail section. -->
+  <ModelBgAnchor />
+  <DetailCloseButton lang={lang} />
+</div>
+</div>
+
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  import { playInkBleed } from '../../lib/sectionTitleReveal';
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  type ProjectsAnimationHandle = {
+    timeline: gsap.core.Timeline;
+    scrollTrigger: ScrollTrigger;
+    destroy: () => void;
+  };
+
+  const buildProjectsScroll = (root: HTMLElement): ProjectsAnimationHandle | null => {
+    const track = root.querySelector<HTMLElement>('.projects-track');
+    const content = root.querySelector<HTMLElement>('.projects-content');
+    const wrapper = root.querySelector<HTMLElement>('#projectsDetailedView');
+
+    if (!track || !root) return null;
+
+    const cards = Array.from(track.querySelectorAll<HTMLElement>('.project-card'));
+    if (cards.length === 0) return null;
+
+
+    const timeline = gsap.timeline({
+      // paused: true,
+      defaults: { ease: 'power2.inOut' },
+    });
+
+    // For each new card i (1..N-1):
+    //   - all previously visible cards shift left by STACK_OFFSET
+    //   - card[i] slides in from a direction: right -> left -> bottom -> top (repeats)
+    // Result: each card stays partially visible on the left as a stack,
+    // with the newest card always on top.
+    const slideDirections = [
+      { x: '200%', y: 0 },   // right
+      { x: '-200%', y: 0 },  // left
+      { x: 0, y: '200%' }   // bottom
+    ];
+    
+    // animates each card into view and shifts the previous cards left
+    cards.forEach((card, i) => {
+      if (i === 0) return; // first card is already in place
+      const dir = slideDirections[(i - 1) % slideDirections.length];
+      timeline.fromTo(
+        card,
+        { x: dir.x, y: dir.y, },
+        { x: '0%', y: '0%',  duration: 1 },
+        i
+      )
+    });
+
+    // One viewport of scroll per card transition.
+    const scrollDistance = 600 * cards.length;
+
+    // Size the spacer BEFORE creating the ScrollTrigger. The spacer is a
+    // direct child of the wrapper (sibling of the sticky `.projects-content`),
+    // so its height extends the wrapper's scrollHeight directly and the
+    // scroller can actually travel the full `scrollDistance`.
+    const spacer = document.querySelector<HTMLElement>('#projectsSpacer');
+    if (spacer) { spacer.style.height = `${scrollDistance}px`; }
+
+    const st = ScrollTrigger.create({
+      scroller: wrapper,
+      trigger: content,
+      start: 'top top',
+      end: () => `+=${scrollDistance}`,
+      scrub: .2,
+      snap: {
+        snapTo: 1 / cards.length,
+        duration: 0.2,
+        ease: 'power2.out',
+      },
+      animation: timeline,
+    });
+
+    // Force a refresh so ScrollTrigger picks up the new layout (wrapper now
+    // actually has `scrollDistance` worth of scroll room). Without this the
+    // trigger was created against the pre-spacer geometry and would cap
+    // the animation below progress = 1.
+    ScrollTrigger.refresh();
+
+    return {
+      timeline,
+      scrollTrigger: st,
+      destroy: () => {
+        st.kill();
+        timeline.kill();
+      },
+    };
+  };
+
+  // Setup: language observer + click handlers. The scroll timeline is
+  // built lazily (in startProjects) so the distance is measured with
+  // the section actually visible.
+  const setupProjects = (root: HTMLElement) => {
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => ScrollTrigger.refresh());
+    }
+    window.addEventListener('resize', () => ScrollTrigger.refresh());
+  };
+
+  // Stored handle to the scroll timeline. Rebuilt on each open so the
+  // distance is computed with the section visible.
+  let projectsHandle: ProjectsAnimationHandle | null = null;
+
+  const startProjects = () => {
+    const root = document.querySelector<HTMLElement>('#detail-overlay')!;
+    setupProjects(root);
+
+    // "Ink Bleed" reveal on the section title.
+    const title = root.querySelector<HTMLElement>('h2[data-section-id="projects"]');
+    playInkBleed(title);
+
+    // Tear down any prior handle (close -> open flow).
+    if (projectsHandle) {
+      projectsHandle.destroy();
+      projectsHandle = null;
+    }
+
+    // Build the scroll timeline now that the section is visible so widths
+    // are computed correctly.
+    projectsHandle = buildProjectsScroll(root);
+
+    // Register the scroll-down tutorial to auto-hide when timeline completes
+    window.__initScrollTutorial?.({
+      sectionId: 'projects',
+      storageKey: 'projects_tutorial_showns',
+      timelineProgress: () => projectsHandle?.timeline.progress() ?? 0,
+    });
+  };
+
+  const stopProjects = () => {
+    if (projectsHandle) {
+      projectsHandle.destroy();
+      projectsHandle = null;
+    }
+  };
+
+  // Run on initial page load and after Astro's client-side navigation.
+  const bootstrap = () => {
+    const root = document.querySelector<HTMLElement>('#projectsDetailedView');
+    if (root) setupProjects(root);
+  };
+  document.addEventListener('astro:page-load', bootstrap);
+  if (document.readyState !== 'loading') {
+    bootstrap();
+  } else {
+    document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
+  }
+
+  // Expose hooks for the scene orchestrator.
+  (window as unknown as { __projectsHooks?: unknown }).__projectsHooks = {
+    start: startProjects,
+    stop: stopProjects,
+  };
+
+
+
+
+  type ToggleableCard = HTMLElement & { classList: DOMTokenList };
+
+  const applyToggle = (card: ToggleableCard): void => {
+    card.classList.toggle('is-expanded');
+  };
+
+  // startViewTransition types live on Document in TS 5.4+
+  type VTDocument = Document & {
+    startViewTransition?: (cb: () => void) => unknown;
+  };
+
+  (window as Window & { __vtCardToggle?: (card: ToggleableCard) => void }).__vtCardToggle =
+    (card: ToggleableCard): void => {
+      const doc = document as VTDocument;
+      if (typeof doc.startViewTransition === 'function') {
+        doc.startViewTransition(() => applyToggle(card));
+      } else {
+        applyToggle(card);
+      }
+    };
+</script>

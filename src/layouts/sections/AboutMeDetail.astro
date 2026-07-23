@@ -1,0 +1,496 @@
+---
+// Detail view shown when the user opens the "About me" section.
+//
+// Layout (rendered into the parent's 3x3 grid via `display: contents`):
+//   row 1 -> title (top-left, tron-font)
+//   row 2 -> typing body + three infinite technology marquees
+//   row 3 -> download CV button (centered)
+import { t, type Lang } from '../../i18n/utils';
+import { technologyCategories } from '../../lib/technologiesByCategory';
+import DetailCloseButton from '../../components/sections/DetailCloseButton.astro';
+import ModelBgAnchor from '../../components/sections/ModelBgAnchor.astro';
+import SectionTitle from '../../components/sections/SectionTitle.astro';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props as Props;
+
+// Duplicate each row so the track can translate from 0 to -50% seamlessly,
+// exactly like the contact marquee in ContactDetail.astro.
+const duplicatedRows = technologyCategories.map((category) => ({
+  ...category,
+  duplicated: [...category.items, ...category.items],
+}));
+
+// Render both language variants so the client-side JS can flip between them
+// on language change without re-mounting the section.
+---
+
+<div
+  id="aboutMeDetailedView"
+  class="contents hidden col-start-1 row-start-1 row-span-3 col-span-3 grid grid-cols-3 grid-rows-3"
+  data-section-detail
+  data-section-id="aboutMe"
+>
+<SectionTitle
+  sectionId="aboutMe"
+  titleKey="sections.aboutMe.title"
+  lang={lang}
+/>
+
+  <div
+    id="aboutMeContent"
+    class="row-start-2 col-span-3 row-span-1 flex flex-col gap-6 px-6 md:px-20 pt-4 pb-6 overflow-hidden pointer-events-auto"
+    data-section-content
+  >
+    <p
+      class:list="about-me-body text-base md:text-lg text-white/80 leading-relaxed max-w-3xl"
+      data-lang={lang}
+      data-typing-target
+      data-source-text={t('es', 'sections.aboutMe.body')}
+    >{t(lang, 'sections.aboutMe.body')}</p>
+
+    <div class="flex flex-col gap-3 mt-2">
+      {duplicatedRows.map((row) => (
+        <div
+          class="tech-marquee-row"
+          data-tech-row={row.id}
+        >
+          <span
+            class:list={["tech-marquee-label", `tech-marquee-label--${row.id}`, 'hidden']}
+            data-tech-row-label={row.id}
+            data-lang={lang}
+          >{t(lang, `sections.aboutMe.techs.${row.id}`)}</span>
+          <div class="tech-marquee-mask">
+            <div
+              class="tech-marquee-track"
+              data-tech-track={row.id}
+              data-tech-direction={row.id === 'back' ? 'reverse' : 'forward'}
+            >
+              {row.duplicated.map((tech) => (
+                <a
+                  href={tech.technologyLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="tech-marquee-item"
+                  aria-label={tech.name}
+                  title={tech.name}
+                >
+                  <img
+                    src={tech.svgUrl}
+                    alt={tech.name}
+                    loading="lazy"
+                    decoding="async"
+                    class="tech-marquee-icon"
+                  />
+                  <span class="tech-marquee-name">{tech.name}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <div
+    id="aboutMeFooter"
+    class="row-start-3 col-span-3 flex items-center justify-center pb-8 pointer-events-auto"
+  >
+    <a
+      href="/cv.pdf"
+      download
+      class="cv-download-btn group inline-flex items-center gap-3 px-6 py-3 rounded-full bg-secondary/15 text-secondary border border-secondary/30 backdrop-blur-md hover:bg-secondary/25 hover:border-secondary/60 transition-all duration-300 shadow-md shadow-black/30"
+      aria-label={t(lang, 'sections.aboutMe.cvAria')}
+      data-i18n-attr={`aria-label:sections.aboutMe.cvAria`}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="w-5 h-5 transition-transform duration-300 group-hover:translate-y-0.5"
+        aria-hidden="true"
+      >
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>
+      <span
+        class:list="cv-download-label text-sm md:text-base font-semibold uppercase tracking-widest"
+        data-lang={lang}
+        data-i18n-text={`sections.aboutMe.cvDownload`}
+      >{t(lang, 'sections.aboutMe.cvDownload')}</span>
+    </a>
+  </div>
+
+  <!-- 3D model anchor and close button shared by every detail section. -->
+  <ModelBgAnchor />
+  <DetailCloseButton lang={lang} />
+</div>
+<style>
+  /* Blinking caret used by the typewriter effect in this section. */
+  .typing-caret::after {
+    content: '|';
+    display: inline-block;
+    margin-left: 0.05em;
+    color: currentColor;
+    animation: typing-caret-blink 1s steps(1) infinite;
+  }
+
+  @keyframes typing-caret-blink {
+    0%, 50% {
+      opacity: 1;
+    }
+    50.01%, 100% {
+      opacity: 0;
+    }
+  }
+
+  /* Technology marquee rows rendered in this section. Each row has a small
+     label on the left, a fade-masked track on the right and the icons
+     inside are duplicated by the Astro template so the GSAP loop is
+     seamless. */
+  .tech-marquee-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .tech-marquee-label {
+    flex-shrink: 0;
+    font-family: var(--font-tron);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-secondary);
+    min-width: 5.5rem;
+    text-align: right;
+    opacity: 0.85;
+  }
+
+  .tech-marquee-label--front { color: var(--color-secondary); }
+  .tech-marquee-label--back  { color: var(--color-tertiary); }
+  .tech-marquee-label--others { color: var(--color-primary); }
+
+  .tech-marquee-mask {
+    position: relative;
+    flex: 1 1 auto;
+    overflow: hidden;
+    /* Soft fade on both edges so icons don't pop in/out harshly. */
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 8%,
+      black 92%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 8%,
+      black 92%,
+      transparent 100%
+    );
+  }
+
+  .tech-marquee-track {
+    display: flex;
+    align-items: center;
+    gap: 2.25rem;
+    width: max-content;
+    white-space: nowrap;
+    will-change: transform;
+  }
+
+  .tech-marquee-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.25s ease;
+  }
+
+  .tech-marquee-item:hover {
+    background: rgba(0, 181, 232, 0.15);
+    border-color: rgba(0, 181, 232, 0.45);
+    color: var(--color-secondary);
+    transform: translateY(-2px);
+  }
+
+  .tech-marquee-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  }
+
+  .tech-marquee-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  @media (max-width: 640px) {
+    .tech-marquee-row {
+      gap: 0.5rem;
+    }
+    .tech-marquee-label {
+      min-width: 4rem;
+      font-size: 0.6rem;
+    }
+    .tech-marquee-icon {
+      width: 1.4rem;
+      height: 1.4rem;
+    }
+    .tech-marquee-name {
+      font-size: 0.75rem;
+    }
+  }
+</style> 
+
+<script>
+  import { gsap } from 'gsap';
+  import { applyLangToDOM } from '../../i18n/client';
+  import { playInkBleed } from '../../lib/sectionTitleReveal';
+
+  const TYPING_SPEED_MS = 25;
+  const MIN_TYPING_DURATION_S = 0.4;
+  const MARQUEE_DURATION = 24;
+
+  type ActiveHandle = {
+    typingTween: gsap.core.Tween | null;
+    marqueeTweens: gsap.core.Tween[];
+    typingState: { target: HTMLElement | null };
+  };
+
+  const handle: ActiveHandle = {
+    typingTween: null,
+    marqueeTweens: [],
+    typingState: { target: null },
+  };
+
+  // Mirror the same DOM sync that Experience/Contact run so language
+  // changes flip the visible paragraphs and labels instantly.
+  const applyDetailLang = () => {
+    const lang = document.documentElement.lang || 'es';
+    document
+      .querySelectorAll<HTMLElement>('[data-section-detail] [data-lang]')
+      .forEach((el) => {
+        el.classList.toggle('hidden', el.dataset.lang !== lang);
+      });
+  };
+
+  // -- Typewriter ---------------------------------------------------------
+
+  const resetTypingState = () => {
+    handle.typingTween?.kill();
+    handle.typingTween = null;
+    handle.typingState.target = null;
+  };
+
+  // Drive the typewriter with a single GSAP tween on a numeric counter and
+  // `steps(N)` so the value jumps one character at a time. This is the
+  // same idea as the CSS `width` + `SteppedEase` trick from the example,
+  // but it works on multi-line paragraphs because we reveal the text via
+  // `textContent` instead of overflowing a fixed-width container.
+  const startTyping = (target: HTMLElement, onDone: () => void) => {
+    resetTypingState();
+    const fullText = target.dataset.sourceText ?? target.textContent ?? '';
+
+    // Skip the animation when the user prefers reduced motion or when
+    // there is barely any text to reveal.
+    if (
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      fullText.length <= 1
+    ) {
+      target.textContent = fullText;
+      target.classList.remove('typing-caret');
+      target.dataset.typed = 'true';
+      onDone();
+      return;
+    }
+
+    target.textContent = '';
+    target.classList.add('typing-caret');
+    target.dataset.typed = 'false';
+    handle.typingState.target = target;
+
+    const length = fullText.length;
+    const counter = { i: 0 };
+
+    handle.typingTween = gsap.to(counter, {
+      i: length,
+      duration: Math.max(MIN_TYPING_DURATION_S, (length * TYPING_SPEED_MS) / 1000),
+      ease: `steps(${length})`,
+      onUpdate: () => {
+        target.textContent = fullText.slice(0, Math.floor(counter.i));
+      },
+      onComplete: () => {
+        target.textContent = fullText;
+        target.classList.remove('typing-caret');
+        target.dataset.typed = 'true';
+        handle.typingTween = null;
+        onDone();
+      },
+    });
+  };
+
+  // Wire the click-to-skip behaviour on every paragraph that supports it.
+  // Each target is registered exactly once; reopening the section resets
+  // the state but keeps the listener attached.
+  const wireTypingSkip = () => {
+    document
+      .querySelectorAll<HTMLElement>('#aboutMeDetailedView [data-typing-target]')
+      .forEach((target) => {
+        if (target.dataset.skipBound === 'true') return;
+        target.dataset.skipBound = 'true';
+        target.style.cursor = 'pointer';
+        target.setAttribute('role', 'button');
+        target.setAttribute('tabindex', '0');
+        target.addEventListener('click', () => {
+          if (target.dataset.typed === 'true') return;
+          handle.typingTween?.progress(1);
+        });
+      });
+  };
+
+  // -- Marquees -----------------------------------------------------------
+
+  // Build the GSAP infinite loop for a single row. The track is rendered
+  // twice in the markup, so translating it from 0 to -50% creates a seamless
+  // loop that GSAP restarts automatically on each cycle thanks to `repeat: -1`.
+  // We pick the direction per row (front/others forward, back reverse) so the
+  // three rows feel alive.
+  const buildMarquee = (track: HTMLElement, direction: 'forward' | 'reverse'): gsap.core.Tween | null => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      gsap.set(track, { x: '0%' });
+      return null;
+    }
+    const tween = gsap.to(track, {
+      x: direction === 'reverse' ? '50%' : '-50%',
+      duration: MARQUEE_DURATION,
+      ease: 'none',
+      repeat: -1,
+    });
+    return tween;
+  };
+
+  // Pause / resume on hover. We rely on timeScale to avoid killing the
+  // tween (which would snap it back to the start).
+  const wireMarqueeHover = (row: HTMLElement, tween: gsap.core.Tween | null) => {
+    if (!tween) return;
+    row.addEventListener('mouseenter', () => {
+      gsap.to(tween, { timeScale: 0, duration: 0.3, overwrite: true });
+    });
+    row.addEventListener('mouseleave', () => {
+      gsap.to(tween, { timeScale: 1, duration: 0.3, overwrite: true });
+    });
+    row.addEventListener('focusin', () => {
+      gsap.to(tween, { timeScale: 0, duration: 0.3, overwrite: true });
+    });
+    row.addEventListener('focusout', () => {
+      gsap.to(tween, { timeScale: 1, duration: 0.3, overwrite: true });
+    });
+  };
+
+  const startMarquees = (root: HTMLElement) => {
+    stopMarquees();
+    root.querySelectorAll<HTMLElement>('[data-tech-track]').forEach((track) => {
+      const direction = (track.dataset.techDirection === 'reverse' ? 'reverse' : 'forward');
+      const tween = buildMarquee(track, direction);
+      if (tween) {
+        const row = track.closest<HTMLElement>('[data-tech-row]');
+        if (row) wireMarqueeHover(row, tween);
+        handle.marqueeTweens.push(tween);
+      }
+    });
+  };
+
+  const stopMarquees = () => {
+    handle.marqueeTweens.forEach((tween) => tween.kill());
+    handle.marqueeTweens = [];
+    document
+      .querySelectorAll<HTMLElement>('#aboutMeDetailedView [data-tech-track]')
+      .forEach((track) => gsap.set(track, { x: '0%' }));
+  };
+
+  // -- Section lifecycle -------------------------------------------------
+
+  const setupAboutMe = () => {
+    const root = document.querySelector<HTMLElement>('#aboutMeDetailedView');
+    if (!root) return;
+    if (root.dataset.aboutMeInit !== 'true') {
+      root.dataset.aboutMeInit = 'true';
+      applyDetailLang();
+      const observer = new MutationObserver(applyDetailLang);
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['lang'],
+      });
+    }
+    wireTypingSkip();
+  };
+
+  // Drives both the typewriter and the marquees when the section opens.
+  // Picks the body paragraph matching the current language so the user
+  // sees their language typed out.
+  const startAboutMe = () => {
+    const root = document.querySelector<HTMLElement>('#aboutMeDetailedView');
+    if (!root) return;
+    setupAboutMe();
+
+    // "Ink Bleed" reveal on the section title. Runs in parallel with the
+    // typewriter and the marquees so the title arrives at the same time.
+    const title = root.querySelector<HTMLElement>('h2[data-section-id="aboutMe"]');
+    playInkBleed(title);
+
+    const lang = (document.documentElement.lang || 'es') as 'es' | 'en';
+    const activeBody = root.querySelector<HTMLElement>(
+      `[data-typing-target][data-lang="${lang}"]:not(.hidden)`,
+    );
+    if (activeBody) {
+      startTyping(activeBody, () => {
+        // caret is removed by the tween's onComplete once typing finishes.
+      });
+    }
+    startMarquees(root);
+  };
+
+  // Tears everything down so the next open replays the typewriter from
+  // scratch and the marquees restart from x=0.
+  const stopAboutMe = () => {
+    resetTypingState();
+    stopMarquees();
+  };
+
+  // Sync the visible language on the section's translatable elements every
+  // time the page's lang attribute changes (e.g. after the user toggles).
+  document.addEventListener('astro:page-load', setupAboutMe);
+  if (document.readyState !== 'loading') {
+    setupAboutMe();
+  } else {
+    document.addEventListener('DOMContentLoaded', setupAboutMe, { once: true });
+  }
+
+  // Keep both variants in sync with the URL segment on first paint.
+  const seg = window.location.pathname.split('/').filter(Boolean)[0];
+  const lang = seg === 'es' || seg === 'en' ? seg : 'en';
+  applyLangToDOM(lang as 'es' | 'en');
+
+  // Expose hooks for the scene orchestrator (homeLandingScene.ts calls
+  // __aboutMeHooks.start() on open and .stop() on close).
+  (window as unknown as { __aboutMeHooks?: unknown }).__aboutMeHooks = {
+    start: startAboutMe,
+    stop: stopAboutMe,
+  };
+</script>
+

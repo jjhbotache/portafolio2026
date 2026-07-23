@@ -11,39 +11,17 @@
   animation-duration: .4s;
 }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  background: #000;
-  color: #fff;
-}
+
+
 
 /* Fix GSAP pinSpacer full-width */
 .pin-spacer {
   width: 100% !important;
 }
-
-@theme  {
-  --color-primary: #0065ca;
-  --color-secondary: #00b5e8;
-  --color-tertiary: #9f20e1;
-  --font-tron: 'Tron', system-ui, sans-serif;
-  --font-8bit: '8bit', monospace;
-  
-}
-:root{
-  /* swiper */
-  --swiper-theme-color: #9f20e1 !important;
-  --swiper-pagination-bullet-inactive-color: #fff;
-}
-
 /* Tron font used by the section titles */
 @font-face {
   font-family: 'Tron';
   src: url('/fonts/Tr2n.ttf') format('truetype');
-  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
@@ -56,9 +34,25 @@ html, body {
   src: url('/fonts/PixeloidSans.ttf') format('truetype');
 }
 
+@theme  {
+  --color-primary: #0065ca;
+  --color-secondary: #00b5e8;
+  --color-tertiary: #9f20e1;
+  --font-tron: 'Tron', system-ui, sans-serif;
+  --font-8bit: '8bit', monospace;
+  --font-pixeloid: 'PixeloidSans', monospace;
+  
+}
+:root{
+  /* swiper */
+  --swiper-theme-color: #9f20e1 !important;
+  --swiper-pagination-bullet-inactive-color: #fff;
+}
+
+
+
 .tron-font {
   font-family: var(--font-tron);
-  /* letter-spacing: 0.08em; */
 }
 
 .bit8-font {
@@ -74,3 +68,38 @@ html, body {
   -ms-overflow-style: none; /* Internet Explorer 10+ */
 }
 
+.tiny-scrollbar::-webkit-scrollbar {
+  width: 4px; /* Adjust the width as needed */
+}
+.tiny-scrollbar::-webkit-scrollbar-track {
+  background: transparent; /* Optional: Set the track background */
+}
+.tiny-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.5); /* Adjust the thumb color as needed */
+  border-radius: 2px; /* Optional: Set the thumb border radius */
+}
+
+/* Shadow pulse animation for project card */
+@keyframes shadow-pulse {
+  0%, 100% {
+    box-shadow: inset 0 0 6px -1px rgba(0, 181, 232, 0.3),
+                inset 0 0 4px -2px rgba(0, 181, 232, 0.2);
+  }
+  50% {
+    box-shadow: inset 0 0 20px -4px rgba(0, 181, 232, 0.6),
+                inset 0 0 12px -4px rgba(0, 181, 232, 0.4);
+  }
+}
+
+.shadow-pulse {
+  animation: shadow-pulse 2s ease-in-out infinite;
+}
+
+    
+strong{
+  font-weight: bold;
+}
+ul{
+  list-style: disc;
+  padding-left: 1.5rem;  
+}

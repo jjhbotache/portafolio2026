@@ -1,0 +1,98 @@
+---
+// Scroll-down hint tutorial component.
+// Shows a "scroll down" animated hint that fades out automatically when the
+// user scrolls to the end of the section. Tracks visibility count in
+// localStorage so it doesn't annoy users who have already seen it.
+import { t, type Lang } from '../../i18n/utils';
+
+interface Props {
+  lang: Lang;
+  sectionId: string;
+  storageKey: string | null; // localStorage key to track how many times the tutorial has been shown
+  maxShowTimes?: number; // max number of times the tutorial will be shown; 0 means infinite
+}
+
+const { lang, sectionId, storageKey, maxShowTimes = 3 } = Astro.props as Props;
+---
+
+<div
+  id={`${sectionId}ScrollTutorial`}
+  class="scroll-tutorial absolute right-50 bottom-50 z-20 flex flex-col items-center gap-1 pointer-events-none transition-opacity duration-500 opacity-0"
+  aria-hidden="true"
+  data-tutorial-storage-key={storageKey}
+  data-tutorial-max-shows={String(maxShowTimes)}
+>
+  <span class="text-xs text-white/90 pixel-font whitespace-nowrap">
+    {t(lang, 'sections.experience.scrollDown')}
+  </span>
+  <span class="scroll-tutorial-icon flex items-center justify-center animate-bounce">
+    <span class="text-secondary text-6xl font-pixeloid transform rotate-180">^</span>
+  </span>
+</div>
+
+<script>
+  import { gsap } from 'gsap';
+
+  // Global type declaration for the exposed tutorial initializer
+  declare global {
+    interface Window {
+      __initScrollTutorial?: (config: ScrollTutorialConfig) => void;
+    }
+  }
+
+  interface ScrollTutorialConfig {
+    sectionId: string;
+    storageKey: string;
+    timelineProgress: () => number;
+  }
+
+  const initScrollTutorial = (config: ScrollTutorialConfig) => {
+    const { sectionId, storageKey, timelineProgress } = config;
+    const tutorial = document.querySelector<HTMLElement>(`#${sectionId}ScrollTutorial`);
+    if (!tutorial) return;
+
+    // Read the cap from the data attribute set by Astro. 0 means infinite:
+    // we skip the localStorage check entirely and never persist the count.
+    const maxShowTimes = parseInt(tutorial.dataset.tutorialMaxShows ?? '3', 10);
+    const infinite = maxShowTimes === 0;
+
+    // Read current count once. Only used when not infinite.
+    const shownCount = infinite ? 0 : parseInt(localStorage.getItem(storageKey) ?? '0', 10);
+
+    // Skip if the user has already seen the tutorial enough times.
+    if (!infinite && shownCount >= maxShowTimes) return;
+
+    // Show the tutorial with a fade-in
+    gsap.to(tutorial, { opacity: 1, duration: 0.5, delay: 0.3 });
+
+    // Poll the timeline progress each frame and hide when reaching the end.
+    let hasHidden = false;
+
+    const checkProgress = () => {
+      if (hasHidden) return;
+      const progress = timelineProgress();
+      if (progress >= 0.99) {
+        hasHidden = true;
+        // Fade out and bump the localStorage counter (skipped when infinite).
+        gsap.to(tutorial, {
+          opacity: 0,
+          duration: 0.4,
+          onComplete: () => {
+            if (infinite) return;
+            localStorage.setItem(storageKey, String(shownCount + 1));
+          },
+        });
+      } else {
+        requestAnimationFrame(checkProgress);
+      }
+    };
+
+    // Start polling after a short delay (let the section animate in)
+    setTimeout(() => requestAnimationFrame(checkProgress), 500);
+  };
+
+  // Expose globally so sections can register their tutorial
+  (window as Window & {
+    __initScrollTutorial?: (config: ScrollTutorialConfig) => void;
+  }).__initScrollTutorial = initScrollTutorial;
+</script>

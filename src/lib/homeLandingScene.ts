@@ -1,6 +1,6 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { createHomeLandingThreeScene, resetCameraToInitialPosition, type LandingScene } from './three/homeLandingThreeScene';
+import { createHomeLandingThreeScene, resetCameraToInitialPosition, DETAIL_VIEW_PIXEL_RATIO, type LandingScene } from './three/homeLandingThreeScene';
 import { CatmullRomCurve3, MathUtils, Vector3, Camera, Group } from 'three';
 import { fadeOutDisk, fadeInDisk } from './three/homeLandingDisk';
 import { fadeOutFloor, fadeInFloor, preloadLandingEnvironment, loadLandingEnvironment } from './three/homeLandingEnvironment';
@@ -56,7 +56,7 @@ let isSpaceIntroPlaying = false;
 const lightCleanupFns: Array<() => void> = [];
 let lightPagehideRegistered = false;
 
-const scrollerPos =  2500;
+const scrollerPos =  1500;
 gsap.registerPlugin(ScrollTrigger);
 const buildLandingTimeline = async (
   heroMask: Element,
@@ -100,15 +100,12 @@ const buildLandingTimeline = async (
 
   // gsap.set(landingScene?.overlay, { autoAlpha: 1, pointerEvents: 'none' });
   
-  const umbralScore = 80; // umbral score needed to decide whether to use the heavy or lightweight intro
-  const canUseHeavyIntro = gpu.score >= umbralScore;
-  let lastCheck = 0;
   const tl = gsap.timeline({
   scrollTrigger: {
     trigger: heroMask,
     start: 'top top',
     end: '+=' + scrollerPos,
-    scrub: .2,
+    scrub: 1,
     pin: true,
     onEnterBack: reset3D,
     
@@ -319,6 +316,10 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
   let isDetailView = false;
   const detailOverlay = document.querySelector('#detail-overlay') as HTMLElement;
   let firstThinkingManRotationY: number = 0;
+  // Pixel ratio captured when the detail view opens, so we can restore the
+  // previous value when it closes (preserves whatever the scene was using
+  // before — default cap or any other override).
+  let detailViewSavedPixelRatio: number | null = null;
   
   if (!detailOverlay) return;
 
@@ -384,6 +385,13 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
 
     if (objsToBeIntersected.length > 0) {
       overlay.style.cursor = 'pointer';
+      // dim the opacity of the title and backdrop when hovered
+      landingScene.titles.getActiveBackdropGroup()?.children.forEach((child) => {
+        if (child instanceof THREE.Mesh) {
+          gsap.to(child.material, { opacity: 0.5, duration: 0.2, ease: 'sine.inOut' })
+          }
+      });
+      
     } else {
       overlay.style.cursor = 'default';
     }
@@ -426,12 +434,22 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       // ENTER DETAIL VIEW
       // pause the idle orbit behavior using the scene helper
       landingScene.pauseOrbit();
+      // Block the idle resume timer for as long as the detail view is open,
+      // so auto-rotation stays off even if the user idles past the delay.
+      landingScene.setAutoRotateSuppressed(true);
       
       landingScene.controls.enabled = false;
       landingScene.titles.setPaused(true);
       landingScene.controls.dampingFactor = 0.002;
 
-      const tl = gsap.timeline();
+      const tl = gsap.timeline({
+        onComplete: () => {
+          if (detailViewSavedPixelRatio === null) {
+            detailViewSavedPixelRatio = landingScene.getPixelRatio();
+            landingScene.setPixelRatio(DETAIL_VIEW_PIXEL_RATIO);
+          }
+        }
+      });
       // reset the camera target to keep models well framed 
       tl.to(landingScene.controls.target, { x: 0, y: 0, z: 0, duration: 0.3, ease: 'power3.inOut' }, 0);
 
@@ -560,8 +578,10 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
           localTarget.z -= 20;
           localTarget.y -= 20;
         }
-        if (group.id === 25) { // cube gear
-          // do nothing
+        if (group.id === 28) { // cube gear
+          // -y & +x
+          localTarget.y -= 35;
+          localTarget.x += 30;
         }
         if (group.id === 26) { // hands
           // do nothing
@@ -632,6 +652,12 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       // restore sections scroll
       document.querySelector<HTMLElement>('#experienceDetailedView')?.scrollTo({ top: 0, behavior: 'auto' });
       document.querySelector<HTMLElement>('#projectsDetailedView')?.scrollTo({ top: 0, behavior: 'auto' });
+
+      // Restore the pixel ratio captured when the detail view opened.
+      if (detailViewSavedPixelRatio !== null) {
+        landingScene.setPixelRatio(detailViewSavedPixelRatio);
+        detailViewSavedPixelRatio = null;
+      }
       
       
       
@@ -645,7 +671,12 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       const tl = gsap.timeline({
         onComplete: () => {
           landingScene.controls.enabled = true;
-          landingScene.controls.autoRotate = true;
+          // Re-enable idle-orbit scheduling and arm the resume timer so the
+          // camera respects the usual inactivity delay before resuming the
+          // auto-rotation, instead of starting to spin the moment the
+          // detail view closes.
+          landingScene.setAutoRotateSuppressed(false);
+          landingScene.scheduleOrbitResume();
           landingScene.titles.setPaused(false);
           landingScene.controls.dampingFactor = 0.06;
         }
@@ -715,30 +746,49 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
   };
 
 
-  const handleOverlayClick = (_event: MouseEvent) => {
-    if (isDetailView) {
-      // While in detail view, the three-overlay doesn't receive clicks (the
-      // detail overlay is on top). Closing is handled by the detail overlay's
-      // click listener below. Nothing to do here.
-      return;
-    }
+  // Track the object hit on pointerdown to validate pointerup
+  let pointerDownHit: THREE.Object3D | null = null;
 
-    // Ignore clicks that land during the space intro animation: the camera
-    // and titles are still settling, so opening the detail view here would
-    // produce a broken transition.
-    if (isSpaceIntroPlaying) return;
+  const handlePointerDown = (event: PointerEvent) => {
+    if (isDetailView || isSpaceIntroPlaying) return;
 
+    updateMouseCoords(event);
     raycaster.setFromCamera(mouse, landingScene.camera);
-    const clickHits = raycaster.intersectObjects(
+    const hits = raycaster.intersectObjects(
       [
         landingScene.titles.getActiveBackdropGroup(),
         landingScene.titles.getActiveTitleGroup(),
       ].filter(Boolean) as THREE.Object3D[],
       true,
     );
-    if (clickHits.length > 0) {
+    pointerDownHit = hits.length > 0 ? hits[0].object : null;
+  };
+
+  const handlePointerUp = (event: PointerEvent) => {
+    if (isDetailView || isSpaceIntroPlaying) return;
+    if (!pointerDownHit) return;
+
+    updateMouseCoords(event);
+    raycaster.setFromCamera(mouse, landingScene.camera);
+    const hits = raycaster.intersectObjects(
+      [
+        landingScene.titles.getActiveBackdropGroup(),
+        landingScene.titles.getActiveTitleGroup(),
+      ].filter(Boolean) as THREE.Object3D[],
+      true,
+    );
+
+    // Only trigger if pointerup hit the same object as pointerdown
+    if (hits.length > 0 && hits[0].object === pointerDownHit) {
       handleToggle("open");
     }
+    pointerDownHit = null;
+  };
+
+  const handleOverlayClick = (_event: MouseEvent) => {
+    // Click validation is now handled by pointerdown/pointerup
+    // This listener is kept for potential future use but the actual
+    // open trigger happens in handlePointerUp
   };
 
   // Close buttons (one per section). Only the active section's button is
@@ -751,6 +801,8 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
     });
   });
 
+  overlay.addEventListener('pointerdown', handlePointerDown);
+  overlay.addEventListener('pointerup', handlePointerUp);
   overlay.addEventListener('click', handleOverlayClick);
 
   return {
@@ -800,6 +852,14 @@ export const initializeHomeLandingScene = async (lang: Lang = 'en') => {
   await buildLandingTimeline(heroMask, contentEl, landingScene, () => {
     detailToggle?.close();
   });
+
+  // Reveal the scroll-down arrow only after GSAP + Three.js + STL fetches
+  // + the landing timeline have all settled. The element starts hidden
+  // (opacity 0) in CSS and fades in via its `transition-opacity` utility.
+  const landingArrow = document.querySelector<HTMLElement>('#landing-arrow');
+  if (landingArrow) {
+    landingArrow.classList.add('loaded');
+  }
 };
 
 

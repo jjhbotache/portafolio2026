@@ -1,0 +1,22 @@
+---
+// Anchor div mounted by every detail view. Three.js mounts the section's
+// 3D model into `#modelBg` so the layout parent does not need a separate
+// canvas tag per section.
+//
+// `position="right"` (default) places the anchor at the right edge of the
+// viewport — used by AboutMe, Experience and Projects. `position="center"`
+// centres it horizontally — used by Contact so the model sits behind the
+// marquee.
+interface Props {
+  position?: 'right' | 'center';
+}
+
+const { position = 'right' } = Astro.props as Props;
+const horizontal =
+  position === 'center' ? 'right-1/2 -translate-x-1/2' : 'right-0';
+---
+
+<div
+  id="modelBg"
+  class={`fixed top-1/2 ${horizontal} w-[33vw] h-[33vh] transform -translate-y-1/2 pointer-events-none z-0`}
+></div>

@@ -5,18 +5,9 @@ import { glob as file } from 'astro/loaders';
 // A field that can be either a plain string or a bilingual `{ en, es }`
 // object. Resolved at render time with `resolveBilingual(value, lang)`.
 const bilingualString = z.union([
-  z.string(),
   z.object({
     en: z.string(),
     es: z.string(),
-  }),
-]);
-
-const bilingualStringArray = z.union([
-  z.array(z.string()),
-  z.object({
-    en: z.array(z.string()),
-    es: z.array(z.string()),
   }),
 ]);
 
@@ -27,45 +18,54 @@ const experiences = defineCollection({
     loader: file({ base: './src/content/experiences', pattern: '**/*.{md,mdx}' }),
     schema: z.object({
         title: bilingualString,
-        enterprises: z.array(
-        z.object({
+        enterprises: z.array( z.object({
           name: bilingualString,
-          logo: z.string().url(),
-          url: z.string().url(),
+          logo: z.url(),
+          url: z.url(),
         })
         ),
-        imgs: z.array(z.string().url()),
-        technologies: bilingualStringArray,
+        imgs: z.array(z.url()),
+        technologies: z.object({
+          es: z.array(z.string()),
+          en: z.array(z.string())
+        }),
         content: bilingualString,
         start: z.object({
-        month: z.number().int().min(1).max(12),
-        year: z.string(),
+          month: z.number().int().min(1).max(12),
+          year: z.string(),
         }),
-    end: z.object({
-      month: z.number().int().min(1).max(12),
-      year: z.string(),
-    }),
+        end: z.object({
+          month: z.number().int().min(1).max(12),
+          year: z.string(),
+        }),
     description: bilingualString,
   }),
 });
 
 // Projects: side projects, demos, personal work. No enterprise, no period.
+// `img` is the cover/thumbnail image (URL or path under /public).
 // `video` is the link to a demo reel (YouTube, Vimeo, mp4, etc.).
-// `links` is a free-form list of related links (repo, live demo, store, etc.).
+// `images` are optional extra screenshots displayed in the card.
+// `importance` is a 1-5 ranking used to sort/order projects.
 const projects = defineCollection({
     loader: file({ base: './src/content/projects', pattern: '**/*.{md,mdx}' }),
-  schema: z.object({
-    title: bilingualString,
-    technologies: bilingualStringArray,
-    video: z.string().url(),
-    links: z.array(
-      z.object({
-        label: bilingualString,
-        url: z.string().url(),
-      })
-    ),
-    description: bilingualString,
-    content: bilingualString,
+    schema: z.object({
+      title: bilingualString,
+      img: z.string(),
+      importance: z.number().int(),
+      technologies: z.object({
+        en: z.array(z.string()),
+        es: z.array(z.string()),
+      }),
+      video: z.url(),
+      links: z.array(
+        z.object({
+          label: bilingualString,
+          url: z.url(),
+        })
+      ),
+      description: bilingualString,
+      content: bilingualString,
   }),
 });
 

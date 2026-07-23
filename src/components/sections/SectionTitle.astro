@@ -1,0 +1,54 @@
+---
+// Reusable section title rendered by every detail view. Drops a top-left
+// tron-font h2 into the parent's 3x3 grid.
+//
+// Two rendering modes are supported so the component fits every detail:
+//
+//   - Single-h2 (default): renders ONE h2 tagged with `data-lang={lang}`.
+//     Used by AboutMe, Experience and Projects. Add `sectionId` so the
+//     orchestrator can locate the title via `[data-section-id]`.
+//
+//   - Dual-h2 (`dualLanguage`): renders TWO h2s, one per locale, and lets
+//     `applyContactLang` (or the global `applyLangToDOM`) toggle their
+//     visibility. Used by Contact so the title is preserved after the user
+//     flips languages at runtime.
+//
+// `size="large"` bumps the desktop size to `md:text-7xl` to match the
+// Experience detail, which renders its title noticeably bigger than the
+// other sections.
+import { t, type Lang } from '../../i18n/utils';
+import gsap from 'gsap';
+
+interface Props {
+  titleKey: string;
+  lang: Lang;
+  sectionId?: string;
+  size?: 'default' | 'large';
+  dualLanguage?: boolean;
+}
+
+const {
+  titleKey,
+  lang,
+  sectionId,
+} = Astro.props as Props;
+---
+
+  <h2
+    class={`neon-text col-start-1 col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-6xl  pointer-events-auto tron-font text-secondary`}
+    data-lang={lang}
+    data-section-id={sectionId}
+    data-section-detail
+  >{t(lang, titleKey)}</h2>
+
+  <script>
+    const tl = gsap.timeline();
+    tl.set(".neon-text", { opacity: 0 })
+      .to(".neon-text", { opacity: 1, duration: 0.1 })
+      .to(".neon-text", { opacity: 0.2, duration: 0.05 })
+      .to(".neon-text", { opacity: 1, duration: 0.1 })
+      .to(".neon-text", { opacity: 0, duration: 0.05 })
+      .to(".neon-text", { opacity: 1, textShadow: "0 0 20px #00FF66", duration: 0.3 });
+  </script>
+
+  

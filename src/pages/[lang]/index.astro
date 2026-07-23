@@ -1,12 +1,13 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { Icon } from 'astro-icon/components'
-import ExperienceDetail from '../../components/sections/ExperienceDetail.astro';
-import AboutMeDetail from '../../components/sections/AboutMeDetail.astro';
-import ContactDetail from '../../components/sections/ContactDetail.astro';
-import ProjectsDetail from '../../components/sections/ProjectsDetail.astro';
+import ExperienceDetail from '../../layouts/sections/ExperienceDetail.astro';
+import AboutMeDetail from '../../layouts/sections/AboutMeDetail.astro';
+import ContactDetail from '../../layouts/sections/ContactDetail.astro';
+import ProjectsDetail from '../../layouts/sections/ProjectsDetail.astro';
 import LanguageToggle from '../../components/LanguageToggle.astro';
 import { isLang, t, type Lang } from '../../i18n/utils';
+import { marked } from 'marked';
 
 const rawLang = Astro.params.lang;
 const lang: Lang = isLang(rawLang) ? rawLang : 'en';
@@ -20,44 +21,9 @@ const descriptionByLang: Record<Lang, string> = {
   es: 'Portafolio interactivo construido con Astro, Three.js y GSAP.',
 };
 
-const exp = {
-  id: 'dpagos',
-  title: 'Plataforma Dpagos',
-  period: 'Mar 2025 — Abr 2025',
-  description: 'Plataforma de puntos de venta para lotería con React, TypeScript, FastAPI y SQLAlchemy.',
-  contentHtml: '<p><strong>Desarrollé</strong> esta plataforma que permite a usuarios puntos de venta vender lotería utilizando el servicio de Billuyo y a un administrador, manejar puntos de venta, su saldo, sus solicitudes de saldo y demás. Se creó utilizando <strong>React</strong> con <strong>TypeScript</strong> para el frontend y <em>FastAPI</em> con <em>SQLAlchemy</em> para el backend. Implementé interfaces modernas con Shadcn, Recharts y Tailwind.</p>\n',
-  technologies: [
-    'React',
-    'TypeScript',
-    'FastAPI',
-    'Shadcn',
-    'Recharts',
-    'SQLAlchemy',
-    'Tailwind'
-  ],
-  imgs: [
-    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Captura_de_pantalla_2025-04-17_155832_l4oywu_befdsq.png',
-    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Captura_de_pantalla_2025-04-17_155942_sw3cfo_xy7q0t.png',
-    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Captura_de_pantalla_2025-04-17_160011_bxkqzo_psnbic.png',
-    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/dpagos_uj37xt.png',
-    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Screenshot_24_xiqgar_hckrzw.png',
-    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Screenshot_23_ydrxt2_opzixd.png',
-    'https://res.cloudinary.com/ddt7qdant/image/upload/v1757945607/Screenshot_25_k190iv_xgdk3d.png'
-  ],
-  periodByLang: { es: 'Mar 2025 — Abr 2025', en: 'Mar 2025 — Apr 2025' },
-  enterprises: [
-    {
-      name: 'Billuyo',
-      logo: 'https://billuyo.com.co/favicon.png',
-      url: 'https://billuyo.com.co'
-    },
-    {
-      name: 'Dpagos',
-      logo: 'https://dpagos-platform-front.vercel.app/logo.svg',
-      url: 'https://dpagos-platform-front.vercel.app'
-    }
-  ]
-}
+
+const i = 0; // index of the project to show in the landing page
+const proj = {"id":"netflix-clone","data":{"title":{"en":"NetflixClone Clone","es":"NetflixClone Clone"},"img":"/projects/imgs/netflixClone.png","importance":3,"technologies":{"en":["React","Paypal","Firebase","GCP","Styled Components","React Router DOM","AWS Cognito"],"es":["React","Paypal","Firebase","GCP","Styled Components","React Router DOM","AWS Cognito"]},"video":"https://res.cloudinary.com/ddt7qdant/video/upload/v1757945621/netflixCloneVideo_gkycka_b6wrbm.mp4","links":[{"label":{"en":"Repository","es":"Repositorio"},"url":"https://github.com/jjhbotache/netflixClone"},{"label":{"en":"Demo","es":"Demo"},"url":"https://netflix-clone-beta-seven-55.vercel.app/"}],"description":{"en":"This is a clone of the Netflix web page. The app simulates user login and registration using AWS Cognito, allows payment of the subscription using Paypal and stores user information in Firebase.","es":"Este es un clon de la pagina web de Netflix. La app simula el login y registro de usuarios utilizando AWS Cognito o Google, permite el pago de la suscripción utilizando Paypal y almacena la información de los usuarios en Firebase."},"content":{"en":"Clone of the Netflix website that replicates the authentication experience,\nnavigation and catalog of the original platform.\n\n## Main features\n\n- **Authentication**: user login and registration with AWS Cognito (also Google).\n- **Payments**: subscription simulation using Paypal.\n- **Persistence**: user information is stored in Firebase.\n- **Deployment**: hosted on Google Cloud Platform.\n","es":"Clon de la página web de Netflix que replica la experiencia de autenticación,\nnavegación y catálogo de la plataforma original.\n\n## Características principales\n\n- **Autenticación**: login y registro de usuarios con AWS Cognito (también Google).\n- **Pagos**: simulación de la suscripción mediante Paypal.\n- **Persistencia**: la información de los usuarios se almacena en Firebase.\n- **Despliegue**: alojamiento en Google Cloud Platform.\n"}},"body":"Clon de la página web de Netflix que replica la experiencia de autenticación,\r\nnavegación y catálogo de la plataforma original.","filePath":"src/content/projects/netflix-clone.md","digest":"055f243c33e71e70","rendered":{"html":"<p>Clon de la página web de Netflix que replica la experiencia de autenticación,\r\nnavegación y catálogo de la plataforma original.</p>","metadata":{"headings":[],"localImagePaths":[],"remoteImagePaths":[],"frontmatter":{"title":{"es":"NetflixClone Clone","en":"NetflixClone Clone"},"img":"/projects/imgs/netflixClone.png","importance":3,"technologies":{"es":["React","Paypal","Firebase","GCP","Styled Components","React Router DOM","AWS Cognito"],"en":["React","Paypal","Firebase","GCP","Styled Components","React Router DOM","AWS Cognito"]},"video":"https://res.cloudinary.com/ddt7qdant/video/upload/v1757945621/netflixCloneVideo_gkycka_b6wrbm.mp4","links":[{"label":{"es":"Repositorio","en":"Repository"},"url":"https://github.com/jjhbotache/netflixClone"},{"label":{"es":"Demo","en":"Demo"},"url":"https://netflix-clone-beta-seven-55.vercel.app/"}],"description":{"es":"Este es un clon de la pagina web de Netflix. La app simula el login y registro de usuarios utilizando AWS Cognito o Google, permite el pago de la suscripción utilizando Paypal y almacena la información de los usuarios en Firebase.","en":"This is a clone of the Netflix web page. The app simulates user login and registration using AWS Cognito, allows payment of the subscription using Paypal and stores user information in Firebase."},"content":{"es":"Clon de la página web de Netflix que replica la experiencia de autenticación,\nnavegación y catálogo de la plataforma original.\n\n## Características principales\n\n- **Autenticación**: login y registro de usuarios con AWS Cognito (también Google).\n- **Pagos**: simulación de la suscripción mediante Paypal.\n- **Persistencia**: la información de los usuarios se almacena en Firebase.\n- **Despliegue**: alojamiento en Google Cloud Platform.\n","en":"Clone of the Netflix website that replicates the authentication experience,\nnavigation and catalog of the original platform.\n\n## Main features\n\n- **Authentication**: user login and registration with AWS Cognito (also Google).\n- **Payments**: subscription simulation using Paypal.\n- **Persistence**: user information is stored in Firebase.\n- **Deployment**: hosted on Google Cloud Platform.\n"}},"imagePaths":[]}},"collection":"projects"}
 ---
 <Layout title={titleByLang[lang]} description={descriptionByLang[lang]} lang={lang}>
   <LanguageToggle />
@@ -82,8 +48,8 @@ const exp = {
         class="fixed h-[110vh]  transform left-[25%] -translate-x-1/2 top-[65%] -translate-y-1/2 drop-shadow-secondary/20 drop-shadow-xl "
       />
 
-      <div class=" fixed bottom-[15%] left-[50%] transform -translate-x-1/2 h-40 w-40 flex items-center justify-center ">
-        <Icon name="downArrow" class="w-10 h-10 text-secondary animate-bounce" />
+      <div id="landing-arrow" class=" fixed bottom-[15%] left-[50%] transform -translate-x-1/2 h-40 w-40 flex items-center justify-center animate-bounce transition-opacity duration-300" data-tutorial-icon>
+        <span class="text-secondary text-6xl font-pixeloid transform rotate-180 ">^</span>
       </div>
 
     </div>
@@ -118,6 +84,20 @@ const exp = {
 </Layout>
 
 <style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--color-gray-950);
+  }
+  html{
+    scrollbar-gutter: stable;
+  }
+  html::-webkit-scrollbar-track {
+    background: red;
+  }
+  
   /* Hero mask used by the landing section. Drives the SVG sparks mask,
      its size/position and the secondary-color overlay opacity. The custom
      properties are mutated at runtime by `homeLandingScene.ts`. */
@@ -207,6 +187,19 @@ const exp = {
       filter: drop-shadow(0 8px 20px rgba(0,0,0,0.5));
     }
 
+    /* Landing scroll-down arrow.
+       Hidden until homeLandingScene signals everything (GSAP + Three.js +
+       STL fetches + landing timeline) is ready, then fades in via the
+       `transition-opacity` utility on the element itself. */
+    #landing-arrow {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #landing-arrow.loaded {
+      opacity: 1;
+    }
+
     /* show cursor by default, show tap on coarse pointers (touch) */
     #cursor-icon { display: block; }
     #tap-icon { display: none; }
@@ -215,6 +208,33 @@ const exp = {
       #cursor-icon { display: none; }
       #tap-icon { display: block; }
     }
+
+    /* ============================================================
+       View Transitions API — zoom + reorder of the project card
+       ============================================================ */
+    /* default duration for the crossfade of the card itself and the
+       slide of its inner panels. `*` covers every named snapshot. */
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation-duration: 500ms;
+      animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* a quicker fade for the rest of the page so the surrounding UI
+       doesn't drag behind the card animation. */
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation-duration: 300ms;
+    }
+
+    /* respect users who asked for less motion */
+    @media (prefers-reduced-motion: reduce) {
+      ::view-transition-old(*),
+      ::view-transition-new(*) {
+        animation-duration: 1ms !important;
+      }
+    }
+
 </style>
 
 <script>
@@ -226,4 +246,5 @@ const exp = {
   initializeHomeLandingScene(lang as 'en' | 'es').catch((err) => {
     console.error('Failed to initialize landing scene:', err);
   });
+
 </script>

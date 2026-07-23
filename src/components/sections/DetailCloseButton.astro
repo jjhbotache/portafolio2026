@@ -1,0 +1,23 @@
+---
+// Round "back" button rendered in every detail view. The orchestrator
+// wires the click handler via `__*Hooks.start()` and toggles `.hidden`
+// on the button depending on which section is currently visible.
+//
+// `data-i18n-attr` is consumed by `applyLangToDOM` so the aria-label
+// gets re-rendered when the user changes the active language.
+import { t, type Lang } from '../../i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props as Props;
+---
+
+<button
+  id="detail-close"
+  type="button"
+  class="hidden grid place-content-center  fixed top-4 left-4 md:top-6 md:left-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white text-2xl  items-center justify-center transition-colors z-55 "
+  aria-label={t(lang, 'ui.closeDetailAria')}
+  data-i18n-attr={`aria-label:ui.closeDetailAria`}
+><span class="font-pixeloid transform scale-x-80 text-3xl translate-y-[-.1em]">&lsaquo;</span></button>

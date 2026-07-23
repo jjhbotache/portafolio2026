@@ -1,9 +1,14 @@
-- [ ]finish experience section
+- [✅]finish experience section
   - [✅]fix slider
   - [✅]add tutorial for slider (scroll down)
   - [✅]add content
-- [ ]fix back button
-- [ ]finish projects section
+- [✅]fix back button
+- [✅]fix ux click model
+- [✅]fix delete auto rotation when open detail
+- [✅]finish projects section
+  - [✅]enhance UI of the cards
+  - [✅]bring content
+- [ ]change titles in animation
 - [ ]finish about section
 - [ ]finish contact section
 - [ ]adding direct menu links to each section
@@ -11,3 +16,4 @@
 - [ ]adding support for mobile
 - [ ]adding models for english titles
 - [ ]adding support for en/es for the content
+- [ ]adding pixeled animation to clear

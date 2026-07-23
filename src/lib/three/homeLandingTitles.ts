@@ -362,7 +362,7 @@ export const createLandingTitles = (
     targetQuaternion.setFromRotationMatrix(tempMatrix);
 
     // Smoothly interpolate rotation using slerp (like GSAP scrub)
-    smoothQuaternion.copy(activeTitle.group.quaternion).slerp(targetQuaternion, 0.1);
+    smoothQuaternion.copy(activeTitle.group.quaternion).slerp(targetQuaternion, 0.8);
     activeTitle.group.quaternion.copy(smoothQuaternion);
 
     backgrounds[activeIndex].update({
