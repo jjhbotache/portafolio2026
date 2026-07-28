@@ -8,7 +8,7 @@
 - [✅]finish projects section
   - [✅]enhance UI of the cards
   - [✅]bring content
-- [ ]change titles in animation
+- [✅]change titles in animation
 - [ ]finish about section
 - [ ]finish contact section
 - [ ]adding direct menu links to each section

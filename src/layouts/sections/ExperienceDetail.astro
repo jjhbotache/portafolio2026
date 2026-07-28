@@ -230,7 +230,7 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
 <script>
   import { ScrollTrigger } from 'gsap/ScrollTrigger';
   import { gsap } from 'gsap';
-  import { playInkBleed } from '../../lib/sectionTitleReveal';
+  import { playTitleIntroAnimation } from '../../lib/sectionTitleReveal';
 
   gsap.registerPlugin(ScrollTrigger);
 
@@ -411,7 +411,7 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
 
     // "Ink Bleed" reveal on the section title.
     const title = root.querySelector<HTMLElement>('h2[data-section-id="experience"]');
-    playInkBleed(title);
+    playTitleIntroAnimation(title);
 
 
     // Tear down any prior handle (close -> open flow).

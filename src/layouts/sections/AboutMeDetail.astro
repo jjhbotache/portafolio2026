@@ -10,15 +10,23 @@ import { technologyCategories } from '../../lib/technologiesByCategory';
 import DetailCloseButton from '../../components/sections/DetailCloseButton.astro';
 import ModelBgAnchor from '../../components/sections/ModelBgAnchor.astro';
 import SectionTitle from '../../components/sections/SectionTitle.astro';
+import { Icon } from 'astro-icon/components';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props as Props;
+
+// order the techs to make the make last 4 be the 4 first instead
+const orderTechs = (techs: typeof technologyCategories[0]['items']) => {
+  const lastFour = techs.slice(-4);
+  const rest = techs.slice(0, -4);
+  return [...lastFour, ...rest];
+};
 
 // Duplicate each row so the track can translate from 0 to -50% seamlessly,
 // exactly like the contact marquee in ContactDetail.astro.
 const duplicatedRows = technologyCategories.map((category) => ({
   ...category,
-  duplicated: [...category.items, ...category.items],
+  duplicated: [...orderTechs(category.items), ...orderTechs(category.items)],
 }));
 
 // Render both language variants so the client-side JS can flip between them
@@ -37,97 +45,69 @@ const duplicatedRows = technologyCategories.map((category) => ({
   lang={lang}
 />
 
-  <div
-    id="aboutMeContent"
-    class="row-start-2 col-span-3 row-span-1 flex flex-col gap-6 px-6 md:px-20 pt-4 pb-6 overflow-hidden pointer-events-auto"
-    data-section-content
-  >
-    <p
-      class:list="about-me-body text-base md:text-lg text-white/80 leading-relaxed max-w-3xl"
-      data-lang={lang}
-      data-typing-target
-      data-source-text={t('es', 'sections.aboutMe.body')}
-    >{t(lang, 'sections.aboutMe.body')}</p>
-
-    <div class="flex flex-col gap-3 mt-2">
-      {duplicatedRows.map((row) => (
-        <div
-          class="tech-marquee-row"
-          data-tech-row={row.id}
-        >
-          <span
-            class:list={["tech-marquee-label", `tech-marquee-label--${row.id}`, 'hidden']}
-            data-tech-row-label={row.id}
-            data-lang={lang}
-          >{t(lang, `sections.aboutMe.techs.${row.id}`)}</span>
-          <div class="tech-marquee-mask">
-            <div
-              class="tech-marquee-track"
-              data-tech-track={row.id}
-              data-tech-direction={row.id === 'back' ? 'reverse' : 'forward'}
-            >
-              {row.duplicated.map((tech) => (
-                <a
-                  href={tech.technologyLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="tech-marquee-item"
-                  aria-label={tech.name}
-                  title={tech.name}
-                >
-                  <img
-                    src={tech.svgUrl}
-                    alt={tech.name}
-                    loading="lazy"
-                    decoding="async"
-                    class="tech-marquee-icon"
-                  />
-                  <span class="tech-marquee-name">{tech.name}</span>
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
+<!-- about me body. The gradient lives on the inner div because GSAP tweens
+     `backgroundSize` on `#expanded-section-body`; if it stayed on the outer
+     section the tween would mutate a no-op property. -->
+<section class="col-start-1 row-start-2 col-span-3 font-pixeloid">
+  <div id="expanded-section-body" class="h-full w-full flex justify-center items-center text-white bg-linear-to-r from-black/20 via-black/50 to-black/20 bg-size-[0%_100%] bg-center bg-no-repeat backdrop-blur-3xl">
+    <div class="max-w-md h-full flex flex-col items-center justify-stretch py-3 text-center gap-4">
+      <p class="text-center text-sm basis-full flex items-start justify-center" id="aboutMeBodyText" data-source-text={t(lang, 'sections.aboutMe.body')} /> 
+      <a href="/cv.pdf" target="_blank" rel="noopener noreferrer" class="flex opacity-0 gap-2 hover:underline group"  >
+        <span
+          class="cv-download-label text-sm md:text-base font-semibold uppercase tracking-widest"
+          data-lang={lang}
+          data-i18n-text={`sections.aboutMe.cvDownload`}
+        >{t(lang, 'sections.aboutMe.cvDownload')}</span>
+        <Icon 
+          name="download" 
+          class="w-6 h-6 text-white fill-white group-hover:scale-90 transition-transform duration-100" 
+        />
+      </a>
+    </div> 
   </div>
+</section>
 
-  <div
-    id="aboutMeFooter"
-    class="row-start-3 col-span-3 flex items-center justify-center pb-8 pointer-events-auto"
-  >
-    <a
-      href="/cv.pdf"
-      download
-      class="cv-download-btn group inline-flex items-center gap-3 px-6 py-3 rounded-full bg-secondary/15 text-secondary border border-secondary/30 backdrop-blur-md hover:bg-secondary/25 hover:border-secondary/60 transition-all duration-300 shadow-md shadow-black/30"
-      aria-label={t(lang, 'sections.aboutMe.cvAria')}
-      data-i18n-attr={`aria-label:sections.aboutMe.cvAria`}
+<!-- techs -->
+ <section class="col-start-1 row-start-3 col-span-3 flex flex-col gap-3 justify-center">
+  {duplicatedRows.map((row) => (
+    <div
+      class="tech-marquee-row"
+      data-tech-row={row.id}
+      data-tech-direction={row.id === 'back' ? 'reverse' : 'forward'}
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="w-5 h-5 transition-transform duration-300 group-hover:translate-y-0.5"
-        aria-hidden="true"
-      >
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-        <polyline points="7 10 12 15 17 10"></polyline>
-        <line x1="12" y1="15" x2="12" y2="3"></line>
-      </svg>
-      <span
-        class:list="cv-download-label text-sm md:text-base font-semibold uppercase tracking-widest"
-        data-lang={lang}
-        data-i18n-text={`sections.aboutMe.cvDownload`}
-      >{t(lang, 'sections.aboutMe.cvDownload')}</span>
-    </a>
-  </div>
+      <div class="tech-marquee-mask">
+        <div
+          class="tech-marquee-track"
+          data-tech-track={row.id}
+          data-tech-direction={row.id === 'back' ? 'reverse' : 'forward'}
+        >
+          {row.duplicated.map((tech) => (
+            <a
+              href={tech.technologyLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="tech-marquee-item"
+              aria-label={tech.name}
+              title={tech.name}
+            >
+              <img
+                src={tech.svgUrl}
+                alt={tech.name}
+                loading="lazy"
+                decoding="async"
+                class="tech-marquee-icon"
+              />
+              <span class="tech-marquee-name">{tech.name}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  ))}
+ </section>
 
   <!-- 3D model anchor and close button shared by every detail section. -->
-  <ModelBgAnchor />
+  <ModelBgAnchor/>
   <DetailCloseButton lang={lang} />
 </div>
 <style>
@@ -200,35 +180,53 @@ const duplicatedRows = technologyCategories.map((category) => ({
   .tech-marquee-track {
     display: flex;
     align-items: center;
-    gap: 2.25rem;
+    box-sizing: content-box;
     width: max-content;
     white-space: nowrap;
     will-change: transform;
+    animation: marquee-scroll 120s linear infinite;
+    filter: saturate(0) brightness(0.7);
+    transition: all 0.4s ease;
   }
+  .tech-marquee-track[data-tech-direction="reverse"] {
+    transform: translateX(-50%);
+    animation: marquee-reverse-scroll 400s linear infinite;
+  }
+  
+  .tech-marquee-track:hover {
+    animation-play-state: paused;
+    filter: saturate(1) brightness(1);
+  }
+  
+
+  @keyframes marquee-scroll {   0% {     transform: translateX(0);   }   100% {     transform: translateX(-50%);   } }
+  @keyframes marquee-reverse-scroll { 0% {   transform: translateX(-50%); } 100% {   transform: translateX(0); } }
 
   .tech-marquee-item {
     display: inline-flex;
     align-items: center;
+    box-sizing: border-box;
     gap: 0.6rem;
+    margin-right: 1.5rem;
     padding: 0.5rem 0.85rem;
     border-radius: 9999px;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.85);
     text-decoration: none;
-    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.25s ease;
+    transition: all 0.2s ease;
   }
 
   .tech-marquee-item:hover {
     background: rgba(0, 181, 232, 0.15);
     border-color: rgba(0, 181, 232, 0.45);
     color: var(--color-secondary);
-    transform: translateY(-2px);
+    transform: scale(.9);
   }
 
   .tech-marquee-icon {
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 1.25rem;
+    height: 1.25rem;
     flex-shrink: 0;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
   }
@@ -259,235 +257,83 @@ const duplicatedRows = technologyCategories.map((category) => ({
 
 <script>
   import { gsap } from 'gsap';
-  import { applyLangToDOM } from '../../i18n/client';
-  import { playInkBleed } from '../../lib/sectionTitleReveal';
+  import {TextPlugin} from 'gsap/TextPlugin';
+  import { playTitleIntroAnimation } from '../../lib/sectionTitleReveal';
+  gsap.registerPlugin(TextPlugin);
+  const MIN_TYPING_DURATION_S = 1.5; // seconds
+  const TYPING_SPEED_MS = 20; // milliseconds per character
 
-  const TYPING_SPEED_MS = 25;
-  const MIN_TYPING_DURATION_S = 0.4;
-  const MARQUEE_DURATION = 24;
+  // Reference to the open-timeline so `stopAboutMe` can kill it cleanly if
+  // the user closes the section mid-animation (otherwise the inline style
+  // would keep mutating after the detail view is hidden).
+  let openTimeline: gsap.core.Timeline | null = null;
 
-  type ActiveHandle = {
-    typingTween: gsap.core.Tween | null;
-    marqueeTweens: gsap.core.Tween[];
-    typingState: { target: HTMLElement | null };
-  };
-
-  const handle: ActiveHandle = {
-    typingTween: null,
-    marqueeTweens: [],
-    typingState: { target: null },
-  };
-
-  // Mirror the same DOM sync that Experience/Contact run so language
-  // changes flip the visible paragraphs and labels instantly.
-  const applyDetailLang = () => {
-    const lang = document.documentElement.lang || 'es';
-    document
-      .querySelectorAll<HTMLElement>('[data-section-detail] [data-lang]')
-      .forEach((el) => {
-        el.classList.toggle('hidden', el.dataset.lang !== lang);
-      });
-  };
-
-  // -- Typewriter ---------------------------------------------------------
-
-  const resetTypingState = () => {
-    handle.typingTween?.kill();
-    handle.typingTween = null;
-    handle.typingState.target = null;
-  };
-
-  // Drive the typewriter with a single GSAP tween on a numeric counter and
-  // `steps(N)` so the value jumps one character at a time. This is the
-  // same idea as the CSS `width` + `SteppedEase` trick from the example,
-  // but it works on multi-line paragraphs because we reveal the text via
-  // `textContent` instead of overflowing a fixed-width container.
-  const startTyping = (target: HTMLElement, onDone: () => void) => {
-    resetTypingState();
-    const fullText = target.dataset.sourceText ?? target.textContent ?? '';
-
-    // Skip the animation when the user prefers reduced motion or when
-    // there is barely any text to reveal.
-    if (
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
-      fullText.length <= 1
-    ) {
-      target.textContent = fullText;
-      target.classList.remove('typing-caret');
-      target.dataset.typed = 'true';
-      onDone();
-      return;
+  // Reveals the background gradient. Uses `fromTo` so every open replays
+  // the full 0% -> 200% sweep — without an explicit `from`, GSAP would
+  // tween from the current inline value (already 200% from the previous
+  // open) to 200%, which is a no-op on re-entry.
+  const expandSectionBody = (): gsap.core.Timeline => {
+    const sectionBodyText = document.querySelector<HTMLElement>('#aboutMeBodyText');
+    
+    if (openTimeline) {
+      openTimeline.kill();
+      openTimeline = null;
     }
-
-    target.textContent = '';
-    target.classList.add('typing-caret');
-    target.dataset.typed = 'false';
-    handle.typingState.target = target;
-
-    const length = fullText.length;
-    const counter = { i: 0 };
-
-    handle.typingTween = gsap.to(counter, {
-      i: length,
-      duration: Math.max(MIN_TYPING_DURATION_S, (length * TYPING_SPEED_MS) / 1000),
-      ease: `steps(${length})`,
-      onUpdate: () => {
-        target.textContent = fullText.slice(0, Math.floor(counter.i));
+    openTimeline = gsap.timeline();
+    openTimeline.fromTo(
+      '#expanded-section-body',
+      { backgroundSize: '0% 100%' },
+      {
+        backgroundSize: '200% 100%',
+        duration: 2,
+        ease: 'power2.inOut',
       },
-      onComplete: () => {
-        target.textContent = fullText;
-        target.classList.remove('typing-caret');
-        target.dataset.typed = 'true';
-        handle.typingTween = null;
-        onDone();
-      },
-    });
-  };
-
-  // Wire the click-to-skip behaviour on every paragraph that supports it.
-  // Each target is registered exactly once; reopening the section resets
-  // the state but keeps the listener attached.
-  const wireTypingSkip = () => {
-    document
-      .querySelectorAll<HTMLElement>('#aboutMeDetailedView [data-typing-target]')
-      .forEach((target) => {
-        if (target.dataset.skipBound === 'true') return;
-        target.dataset.skipBound = 'true';
-        target.style.cursor = 'pointer';
-        target.setAttribute('role', 'button');
-        target.setAttribute('tabindex', '0');
-        target.addEventListener('click', () => {
-          if (target.dataset.typed === 'true') return;
-          handle.typingTween?.progress(1);
-        });
-      });
-  };
-
-  // -- Marquees -----------------------------------------------------------
-
-  // Build the GSAP infinite loop for a single row. The track is rendered
-  // twice in the markup, so translating it from 0 to -50% creates a seamless
-  // loop that GSAP restarts automatically on each cycle thanks to `repeat: -1`.
-  // We pick the direction per row (front/others forward, back reverse) so the
-  // three rows feel alive.
-  const buildMarquee = (track: HTMLElement, direction: 'forward' | 'reverse'): gsap.core.Tween | null => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      gsap.set(track, { x: '0%' });
-      return null;
-    }
-    const tween = gsap.to(track, {
-      x: direction === 'reverse' ? '50%' : '-50%',
-      duration: MARQUEE_DURATION,
-      ease: 'none',
-      repeat: -1,
-    });
-    return tween;
-  };
-
-  // Pause / resume on hover. We rely on timeScale to avoid killing the
-  // tween (which would snap it back to the start).
-  const wireMarqueeHover = (row: HTMLElement, tween: gsap.core.Tween | null) => {
-    if (!tween) return;
-    row.addEventListener('mouseenter', () => {
-      gsap.to(tween, { timeScale: 0, duration: 0.3, overwrite: true });
-    });
-    row.addEventListener('mouseleave', () => {
-      gsap.to(tween, { timeScale: 1, duration: 0.3, overwrite: true });
-    });
-    row.addEventListener('focusin', () => {
-      gsap.to(tween, { timeScale: 0, duration: 0.3, overwrite: true });
-    });
-    row.addEventListener('focusout', () => {
-      gsap.to(tween, { timeScale: 1, duration: 0.3, overwrite: true });
-    });
-  };
-
-  const startMarquees = (root: HTMLElement) => {
-    stopMarquees();
-    root.querySelectorAll<HTMLElement>('[data-tech-track]').forEach((track) => {
-      const direction = (track.dataset.techDirection === 'reverse' ? 'reverse' : 'forward');
-      const tween = buildMarquee(track, direction);
-      if (tween) {
-        const row = track.closest<HTMLElement>('[data-tech-row]');
-        if (row) wireMarqueeHover(row, tween);
-        handle.marqueeTweens.push(tween);
-      }
-    });
-  };
-
-  const stopMarquees = () => {
-    handle.marqueeTweens.forEach((tween) => tween.kill());
-    handle.marqueeTweens = [];
-    document
-      .querySelectorAll<HTMLElement>('#aboutMeDetailedView [data-tech-track]')
-      .forEach((track) => gsap.set(track, { x: '0%' }));
-  };
-
-  // -- Section lifecycle -------------------------------------------------
-
-  const setupAboutMe = () => {
-    const root = document.querySelector<HTMLElement>('#aboutMeDetailedView');
-    if (!root) return;
-    if (root.dataset.aboutMeInit !== 'true') {
-      root.dataset.aboutMeInit = 'true';
-      applyDetailLang();
-      const observer = new MutationObserver(applyDetailLang);
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['lang'],
-      });
-    }
-    wireTypingSkip();
-  };
-
-  // Drives both the typewriter and the marquees when the section opens.
-  // Picks the body paragraph matching the current language so the user
-  // sees their language typed out.
-  const startAboutMe = () => {
-    const root = document.querySelector<HTMLElement>('#aboutMeDetailedView');
-    if (!root) return;
-    setupAboutMe();
-
-    // "Ink Bleed" reveal on the section title. Runs in parallel with the
-    // typewriter and the marquees so the title arrives at the same time.
-    const title = root.querySelector<HTMLElement>('h2[data-section-id="aboutMe"]');
-    playInkBleed(title);
-
-    const lang = (document.documentElement.lang || 'es') as 'es' | 'en';
-    const activeBody = root.querySelector<HTMLElement>(
-      `[data-typing-target][data-lang="${lang}"]:not(.hidden)`,
     );
-    if (activeBody) {
-      startTyping(activeBody, () => {
-        // caret is removed by the tween's onComplete once typing finishes.
-      });
+    // typewriter effect
+    openTimeline.to(sectionBodyText, {
+      text: sectionBodyText?.dataset.sourceText || '',
+      duration: Math.max(MIN_TYPING_DURATION_S, (sectionBodyText?.dataset.sourceText?.length || 0) * TYPING_SPEED_MS / 1000),
+      ease: "none"
+    }, "<+=0.3");
+    
+    openTimeline.to('#expanded-section-body a', {
+      opacity: 1,
+      duration: 0.5,
+      ease: 'power1.inOut',
+    }, "<+=0.3");
+    
+    return openTimeline;
+  };
+  
+
+  // Driven by the scene orchestrator every time the user opens the
+  // About Me section (see `getSectionHooks` in lib/homeLandingScene.ts).
+  // Runs both the background reveal and the title intro animation.
+  const startAboutMe = (): void => {
+    const root = document.querySelector<HTMLElement>('#aboutMeDetailedView');
+    if (!root) return;
+    expandSectionBody();
+    playTitleIntroAnimation(
+      root.querySelector<HTMLElement>('h2[data-section-id="aboutMe"]'),
+    );
+  };
+
+  // Driven by the orchestrator when the user closes the section. Kills any
+  // running tweens and resets the background state so the next open
+  // animates from 0% again.
+  const stopAboutMe = (): void => {
+    if (openTimeline) {
+      openTimeline.kill();
+      openTimeline = null;
     }
-    startMarquees(root);
+    gsap.set('#expanded-section-body', { backgroundSize: '0% 100%' });
+    gsap.set('#aboutMeBodyText', { text: '', clearProps: 'all' });
+    gsap.set('#expanded-section-body a', { opacity: 0 });
   };
 
-  // Tears everything down so the next open replays the typewriter from
-  // scratch and the marquees restart from x=0.
-  const stopAboutMe = () => {
-    resetTypingState();
-    stopMarquees();
-  };
-
-  // Sync the visible language on the section's translatable elements every
-  // time the page's lang attribute changes (e.g. after the user toggles).
-  document.addEventListener('astro:page-load', setupAboutMe);
-  if (document.readyState !== 'loading') {
-    setupAboutMe();
-  } else {
-    document.addEventListener('DOMContentLoaded', setupAboutMe, { once: true });
-  }
-
-  // Keep both variants in sync with the URL segment on first paint.
-  const seg = window.location.pathname.split('/').filter(Boolean)[0];
-  const lang = seg === 'es' || seg === 'en' ? seg : 'en';
-  applyLangToDOM(lang as 'es' | 'en');
-
-  // Expose hooks for the scene orchestrator (homeLandingScene.ts calls
-  // __aboutMeHooks.start() on open and .stop() on close).
+  // Expose hooks for the scene orchestrator. The orchestrator calls
+  // `start` when the user opens this section and `stop` when they close
+  // it, so the animations never fire on initial page load.
   (window as unknown as { __aboutMeHooks?: unknown }).__aboutMeHooks = {
     start: startAboutMe,
     stop: stopAboutMe,

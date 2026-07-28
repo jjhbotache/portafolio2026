@@ -594,9 +594,10 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
         if (group.id === 24) { // thinking man
           firstThinkingManRotationY = targetGroup.children[0].rotation.y;
           
-          localTarget.y -= 20;
-          localTarget.x -= 20;
+          localTarget.y -= 60;
+          localTarget.x -= 70;
           gsap.to(targetGroup.children[0].rotation, { y: MathUtils.degToRad(-45), duration: 0.5, ease: 'power3.inOut',delay: 0.3 });
+          rotationY += MathUtils.degToRad(-15);
           
         }
         

@@ -6,7 +6,6 @@ import { gsap } from 'gsap';
 // crisp regardless of which section is active. Respects
 // `prefers-reduced-motion` by clearing any inline styles and skipping the
 // animation entirely.
-const INK_BLEED_DURATION = 1.5;
 
 type TitleTarget =
   | HTMLElement
@@ -15,24 +14,26 @@ type TitleTarget =
   | null
   | undefined;
 
-export const playInkBleed = (target: TitleTarget): void => {
+export const playTitleIntroAnimation = (target: TitleTarget): void => {
   if (!target) return;
 
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    gsap.set(target, { clearProps: 'filter,opacity,scale,transform' });
-    return;
-  }
-
-  const elements: HTMLElement[] = Array.from(
+    const elements: HTMLElement[] = Array.from(
     target instanceof HTMLElement ? [target] : Array.from(target),
   );
   if (elements.length === 0) return;
 
-  gsap.from(elements, {
-    filter: 'blur(20px)',
-    opacity: 0,
-    scale: 0.9,
-    duration: INK_BLEED_DURATION,
-    ease: 'power2.out',
-  });
+    const tl = gsap.timeline();
+    tl.set(elements, { opacity: 0, textShadow: "none" })
+      .to(elements, { opacity: 1, duration: 0.1 })
+      .from(elements, {
+        clipPath: "inset(0 100% 0 0)",
+        duration: 1.2, ease: "power3.inOut"
+      })
+      .to(elements, { opacity: 0.2, duration: 0.05 })
+      .to(elements, { opacity: 1, duration: 0.1 })
+      .to(elements, { opacity: 0, duration: 0.05 })
+      .to(elements, { opacity: 0.2, duration: 0.1 })
+      .to(elements, { opacity: 1, duration: 0.3 })
+      .to(elements, { opacity: 0, duration: 0.05 })
+      .to(elements, { opacity: 1, textShadow: "0 0 8px #07eaff", duration: 1 });
 };
