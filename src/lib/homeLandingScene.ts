@@ -859,7 +859,9 @@ export const initializeHomeLandingScene = async (lang: Lang = 'en') => {
   // (opacity 0) in CSS and fades in via its `transition-opacity` utility.
   const landingArrow = document.querySelector<HTMLElement>('#landing-arrow');
   if (landingArrow) {
-    landingArrow.classList.add('loaded');
+    setTimeout(() => {
+      landingArrow.style.opacity = '1';
+    }, 10);
   }
 };
 

@@ -22,8 +22,7 @@ const descriptionByLang: Record<Lang, string> = {
 };
 
 
-const i = 0; // index of the project to show in the landing page
-const proj = {"id":"netflix-clone","data":{"title":{"en":"NetflixClone Clone","es":"NetflixClone Clone"},"img":"/projects/imgs/netflixClone.png","importance":3,"technologies":{"en":["React","Paypal","Firebase","GCP","Styled Components","React Router DOM","AWS Cognito"],"es":["React","Paypal","Firebase","GCP","Styled Components","React Router DOM","AWS Cognito"]},"video":"https://res.cloudinary.com/ddt7qdant/video/upload/v1757945621/netflixCloneVideo_gkycka_b6wrbm.mp4","links":[{"label":{"en":"Repository","es":"Repositorio"},"url":"https://github.com/jjhbotache/netflixClone"},{"label":{"en":"Demo","es":"Demo"},"url":"https://netflix-clone-beta-seven-55.vercel.app/"}],"description":{"en":"This is a clone of the Netflix web page. The app simulates user login and registration using AWS Cognito, allows payment of the subscription using Paypal and stores user information in Firebase.","es":"Este es un clon de la pagina web de Netflix. La app simula el login y registro de usuarios utilizando AWS Cognito o Google, permite el pago de la suscripción utilizando Paypal y almacena la información de los usuarios en Firebase."},"content":{"en":"Clone of the Netflix website that replicates the authentication experience,\nnavigation and catalog of the original platform.\n\n## Main features\n\n- **Authentication**: user login and registration with AWS Cognito (also Google).\n- **Payments**: subscription simulation using Paypal.\n- **Persistence**: user information is stored in Firebase.\n- **Deployment**: hosted on Google Cloud Platform.\n","es":"Clon de la página web de Netflix que replica la experiencia de autenticación,\nnavegación y catálogo de la plataforma original.\n\n## Características principales\n\n- **Autenticación**: login y registro de usuarios con AWS Cognito (también Google).\n- **Pagos**: simulación de la suscripción mediante Paypal.\n- **Persistencia**: la información de los usuarios se almacena en Firebase.\n- **Despliegue**: alojamiento en Google Cloud Platform.\n"}},"body":"Clon de la página web de Netflix que replica la experiencia de autenticación,\r\nnavegación y catálogo de la plataforma original.","filePath":"src/content/projects/netflix-clone.md","digest":"055f243c33e71e70","rendered":{"html":"<p>Clon de la página web de Netflix que replica la experiencia de autenticación,\r\nnavegación y catálogo de la plataforma original.</p>","metadata":{"headings":[],"localImagePaths":[],"remoteImagePaths":[],"frontmatter":{"title":{"es":"NetflixClone Clone","en":"NetflixClone Clone"},"img":"/projects/imgs/netflixClone.png","importance":3,"technologies":{"es":["React","Paypal","Firebase","GCP","Styled Components","React Router DOM","AWS Cognito"],"en":["React","Paypal","Firebase","GCP","Styled Components","React Router DOM","AWS Cognito"]},"video":"https://res.cloudinary.com/ddt7qdant/video/upload/v1757945621/netflixCloneVideo_gkycka_b6wrbm.mp4","links":[{"label":{"es":"Repositorio","en":"Repository"},"url":"https://github.com/jjhbotache/netflixClone"},{"label":{"es":"Demo","en":"Demo"},"url":"https://netflix-clone-beta-seven-55.vercel.app/"}],"description":{"es":"Este es un clon de la pagina web de Netflix. La app simula el login y registro de usuarios utilizando AWS Cognito o Google, permite el pago de la suscripción utilizando Paypal y almacena la información de los usuarios en Firebase.","en":"This is a clone of the Netflix web page. The app simulates user login and registration using AWS Cognito, allows payment of the subscription using Paypal and stores user information in Firebase."},"content":{"es":"Clon de la página web de Netflix que replica la experiencia de autenticación,\nnavegación y catálogo de la plataforma original.\n\n## Características principales\n\n- **Autenticación**: login y registro de usuarios con AWS Cognito (también Google).\n- **Pagos**: simulación de la suscripción mediante Paypal.\n- **Persistencia**: la información de los usuarios se almacena en Firebase.\n- **Despliegue**: alojamiento en Google Cloud Platform.\n","en":"Clone of the Netflix website that replicates the authentication experience,\nnavigation and catalog of the original platform.\n\n## Main features\n\n- **Authentication**: user login and registration with AWS Cognito (also Google).\n- **Payments**: subscription simulation using Paypal.\n- **Persistence**: user information is stored in Firebase.\n- **Deployment**: hosted on Google Cloud Platform.\n"}},"imagePaths":[]}},"collection":"projects"}
+
 ---
 <Layout title={titleByLang[lang]} description={descriptionByLang[lang]} lang={lang}>
   <LanguageToggle />
@@ -48,7 +47,7 @@ const proj = {"id":"netflix-clone","data":{"title":{"en":"NetflixClone Clone","e
         class="fixed h-[110vh]  transform left-[25%] -translate-x-1/2 top-[65%] -translate-y-1/2 drop-shadow-secondary/20 drop-shadow-xl "
       />
 
-      <div id="landing-arrow" class=" fixed bottom-[15%] left-[50%] transform -translate-x-1/2 h-40 w-40 flex items-center justify-center animate-bounce transition-opacity duration-300" data-tutorial-icon>
+      <div id="landing-arrow" class=" fixed bottom-[15%] left-[50%] transform -translate-x-1/2 h-40 w-40 flex items-center justify-center animate-bounce transition-all opacity-0 duration-500" data-tutorial-icon>
         <span class="text-secondary text-6xl font-pixeloid transform rotate-180 ">^</span>
       </div>
 
@@ -78,10 +77,14 @@ const proj = {"id":"netflix-clone","data":{"title":{"en":"NetflixClone Clone","e
   </div>
   
   <!-- dev -->
-  <!-- <div class="h-[60vh] w-full absolute top-0 left-0 bg-white">
+  <!-- <div class="h-screen w-full absolute top-0 left-0 bg-[#222]">
+  
+  
   </div> -->
 
 </Layout>
+
+
 
 <style>
   html, body {
@@ -187,18 +190,7 @@ const proj = {"id":"netflix-clone","data":{"title":{"en":"NetflixClone Clone","e
       filter: drop-shadow(0 8px 20px rgba(0,0,0,0.5));
     }
 
-    /* Landing scroll-down arrow.
-       Hidden until homeLandingScene signals everything (GSAP + Three.js +
-       STL fetches + landing timeline) is ready, then fades in via the
-       `transition-opacity` utility on the element itself. */
-    #landing-arrow {
-      opacity: 0;
-      pointer-events: none;
-    }
 
-    #landing-arrow.loaded {
-      opacity: 1;
-    }
 
     /* show cursor by default, show tap on coarse pointers (touch) */
     #cursor-icon { display: block; }

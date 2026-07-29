@@ -1,16 +1,45 @@
 ---
-// Contact detail view. Renders an infinite horizontal marquee with the
-// contact links (currently 4). The track is duplicated and translated
-// continuously via a GSAP timeline. Respects prefers-reduced-motion by
-// showing the icons in a static row instead of animating.
-import { contactLinks } from '../../lib/contactLinks';
+// Contact detail view.
+//
+// Layout (rendered into the parent's 3x3 grid via `display: contents`):
+//   row 1 -> title (top-left, tron-font)
+//   row 2 -> contact body text + mailto email link + small phone link
+//   row 3 -> infinite horizontal icon marquee with
+//             [github, gmail, linkedin, telegram, whatsapp]
+//
+// The marquee reuses the exact same animation/keyframe names as the tech
+// marquees in AboutMeDetail.astro. CSS is duplicated here because Astro
+// scopes `<style>` per component, so the hash would not match otherwise.
 import { t, type Lang } from '../../i18n/utils';
 import DetailCloseButton from '../../components/sections/DetailCloseButton.astro';
 import ModelBgAnchor from '../../components/sections/ModelBgAnchor.astro';
 import SectionTitle from '../../components/sections/SectionTitle.astro';
+import { Icon } from 'astro-icon/components';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props as Props;
+
+// Contact info rendered in the centre of the section. The email opens the
+// user's mail client via `mailto:`; the phone opens WhatsApp with a
+// pre-filled message so the first conversation already has context.
+const CONTACT_EMAIL = 'juanjosehuetas.dev@gmail.com';
+const CONTACT_PHONE_DISPLAY = '+57 3241066569';
+const CONTACT_PHONE_HREF =
+  'https://wa.me/3241066569?text=Hola%20Juan%20Jose,%20vi%20tu%20portafolio%20y%20me%20gustar%C3%ADa%20contactarte!';
+
+// Icons rendered in the marquee. `icon` matches a file in `src/icons/` so
+// the astro-icon `<Icon />` component can inline the SVG.
+const contactIcons = [
+  { icon: 'github',   label: 'GitHub',   href: 'https://github.com/jjhbotache' },
+  { icon: 'gmail',    label: 'Email',    href: `mailto:${CONTACT_EMAIL}` },
+  { icon: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/in/juan-jose-huertas-botache/' },
+  { icon: 'telegram', label: 'Telegram', href: 'https://t.me/jjhbotache' },
+  { icon: 'whatsapp', label: 'WhatsApp', href: CONTACT_PHONE_HREF },
+] as const;
+
+// Duplicate the row so the CSS keyframe (which translates from 0 to -50%)
+// loops seamlessly without a visible jump.
+const duplicatedIcons = [...contactIcons, ...contactIcons];
 ---
 
 <div
@@ -19,132 +48,191 @@ const { lang } = Astro.props as Props;
   data-section-detail
   data-section-id="contact"
 >
-  <!-- Contact renders BOTH language variants of the title so the orchestrator
-       can flip languages at runtime without losing the heading. -->
+  <!-- Renders both language variants so the orchestrator can flip languages
+       at runtime without losing the heading. -->
   <SectionTitle
     titleKey="sections.contact.title"
     lang={lang}
     dualLanguage
   />
 
-  <div
-    class="contact-content col-start-1 col-span-3 row-start-2 row-span-2 flex items-center justify-center overflow-hidden"
+  <!-- Row 2: contact copy + clickable email + small phone link. The body
+       keeps `data-lang` so applyLangToDOM() can show/hide the right
+       language variant on toggle. -->
+  <section
+    class="col-start-1 row-start-1 col-span-3 row-span-3 flex flex-col items-start justify-center gap-8 px-6 text-center
+     bg-black/60 backdrop-blur-md -z-1 overflow-hidden"
     data-section-content
   >
     <p
-      class:list={["text-lg text-white/70 max-w-xl text-center px-6 mb-8 absolute top-1/3 left-1/2 -translate-x-1/2 z-10 pointer-events-none", lang === 'es' ? '' : 'hidden']}
-      data-lang="es"
-    >{t('es', 'sections.contact.body')}</p>
-    <p
-      class:list={["text-lg text-white/70 max-w-xl text-center px-6 mb-8 absolute top-1/3 left-1/2 -translate-x-1/2 z-10 pointer-events-none", lang === 'en' ? '' : 'hidden']}
-      data-lang="en"
-    >{t('en', 'sections.contact.body')}</p>
+      class="text-base md:text-lg text-white/70 max-w-xl"
+      data-lang={lang}
+    >{t(lang, 'sections.contact.body')}</p>
 
-    <div
-      class="contact-marquee-mask w-full overflow-hidden"
-      data-marquee-mask
+    <a
+      href={`mailto:${CONTACT_EMAIL}`}
+      class="font-pixeloid uppercase tracking-widest text-2xl md:text-4xl lg:text-5xl text-white/95 hover:text-white underline underline-offset-[6px] decoration-white/30 hover:decoration-white/80 transition-colors break-all"
+      target="_blank"
     >
-      <div
-        class="contact-marquee-track flex items-center gap-12 whitespace-nowrap will-change-transform"
-        data-marquee-track
+      {CONTACT_EMAIL.split('@')[0]}<span class="text-sm text-white/50 ">@{CONTACT_EMAIL.split('@')[1]}</span>
+    </a>
+
+    <p class="text-xs md:text-sm font-mono text-white/50 flex items-center gap-1">
+      or by phone:
+      <a
+        href={CONTACT_PHONE_HREF}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="font-pixeloid ml-1 underline underline-offset-4 decoration-white/30 hover:text-white hover:decoration-white/80 transition-colors flex gap-1 items-center"
       >
-        {contactLinks.map((link) => (
-          <a
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="contact-marquee-item flex flex-col items-center gap-2 text-white/80 hover:text-secondary transition-colors min-w-30"
-            aria-label={link.label}
-            set:html={`<span class="w-16 h-16">${link.iconSvg}</span><span class="text-sm uppercase tracking-widest">${link.label}</span>`}
-          />
-        ))}
-        <!-- Duplicated so the timeline can loop seamlessly from 0% to -50% -->
-        {contactLinks.map((link) => (
-          <a
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="contact-marquee-item flex flex-col items-center gap-2 text-white/80 hover:text-secondary transition-colors min-w-30"
-            aria-label={link.label}
-            set:html={`<span class="w-16 h-16">${link.iconSvg}</span><span class="text-sm uppercase tracking-widest">${link.label}</span>`}
-          />
-        ))}
+        <Icon name="whatsapp" class="w-5 h-5" />  {CONTACT_PHONE_DISPLAY}
+      </a>
+    </p>
+    <!-- Row 3: infinite icon marquee. Animation is identical to the tech
+         marquees in AboutMeDetail.astro. -->
+    <section class="fixed bottom-0 left-32 w-50% overflow-hidden  transform translate-x-[0%] -translate-y-[90%]  -rotate-25">
+      <div class="tech-marquee-row w-full transform translate-x-[10%]">
+        <div class="tech-marquee-mask">
+          <div
+            class="tech-marquee-track"
+            data-tech-track="contact"
+            data-tech-direction="forward"
+          >
+            {duplicatedIcons.map((entry) => (
+              <a
+                href={entry.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="tech-marquee-item"
+                aria-label={entry.label}
+                title={entry.label}
+              >
+                <Icon name={entry.icon} class="tech-marquee-icon w-5 h-5" />
+              </a>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </section>
+
+
   <!-- 3D model anchor and close button shared by every detail section. The
-       Contact anchor sits centred so the 3D model lines up with the marquee. -->
+       Contact anchor sits centred so the 3D model lines up with the
+       marquee. -->
   <ModelBgAnchor position="center" />
   <DetailCloseButton lang={lang} />
 </div>
 
+<style>
+  /* Marquee styles duplicated verbatim from AboutMeDetail.astro. Astro
+     scopes `<style>` per component, so we cannot share these classes
+     across files. Keep them in sync with the original if you tweak them. */
+  .tech-marquee-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .tech-marquee-mask {
+    position: relative;
+    flex: 1 1 auto;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 8%,
+      black 92%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 8%,
+      black 92%,
+      transparent 100%
+    );
+  }
+
+  .tech-marquee-track {
+    display: flex;
+    align-items: center;
+    box-sizing: content-box;
+    width: max-content;
+    white-space: nowrap;
+    will-change: transform;
+    animation: marquee-scroll 10s linear infinite;
+    filter: saturate(0) brightness(0.7);
+    transition: all 0.4s ease;
+  }
+  .tech-marquee-track:hover {
+    animation-play-state: paused;
+    filter: saturate(1) brightness(1);
+  }
+
+  @keyframes marquee-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  .tech-marquee-item {
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    gap: 0.6rem;
+    margin-right: 1.5rem;
+    padding: 0.5rem 0.85rem;
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .tech-marquee-item:hover {
+    background: rgba(0, 181, 232, 0.15);
+    border-color: rgba(0, 181, 232, 0.45);
+    color: var(--color-secondary);
+    transform: scale(.9);
+  }
+
+  .tech-marquee-icon {
+    width: 10rem;
+    height: 10rem;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  }
+
+  .tech-marquee-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  @media (max-width: 640px) {
+    .tech-marquee-item {
+      padding: 0.4rem 0.7rem;
+    }
+    .tech-marquee-icon {
+      width: 1.4rem;
+      height: 1.4rem;
+    }
+    .tech-marquee-name {
+      font-size: 0.75rem;
+    }
+  }
+</style>
+
 <script>
-  import { gsap } from 'gsap';
   import { playTitleIntroAnimation } from '../../lib/sectionTitleReveal';
 
-  // Drive a horizontal marquee. The track is rendered twice (the original
-  // items followed by a clone), so translating from 0 to -50% creates a
-  // seamless infinite loop.
-  const startMarquee = (root: HTMLElement): gsap.core.Tween | null => {
-    const track = root.querySelector<HTMLElement>('[data-marquee-track]');
-    if (!track) return null;
-
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reducedMotion) {
-      gsap.set(track, { x: 0 });
-      return null;
-    }
-
-    const tween = gsap.to(track, {
-      x: '-50%',
-      duration: 20,
-      ease: 'none',
-      repeat: -1,
-    });
-
-    return tween;
-  };
-
-  const applyContactLang = (root: HTMLElement) => {
-    const lang = (document.documentElement.lang || 'es') as 'es' | 'en';
-    root.querySelectorAll<HTMLElement>('[data-lang]').forEach((el) => {
-      el.classList.toggle('hidden', el.dataset.lang !== lang);
-    });
-  };
-
-  const setupContact = (root: HTMLElement) => {
-    if (root.dataset.contactInit === 'true') return;
-    root.dataset.contactInit = 'true';
-
-    applyContactLang(root);
-
-    const observer = new MutationObserver(() => applyContactLang(root));
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['lang'],
-    });
-  };
-
-  const startContact = () => {
+  // Driven by the scene orchestrator every time the user opens the
+  // Contact section. Only the title gets the intro animation; the body,
+  // email link and marquee are always visible while the section is open.
+  const startContact = (): void => {
     const root = document.querySelector<HTMLElement>('#contactDetailedView');
     if (!root) return;
-    setupContact(root);
-    // "Ink Bleed" reveal on the section title (both language variants so
-    // whichever is visible once applyContactLang runs will bleed in).
     playTitleIntroAnimation(root.querySelectorAll<HTMLElement>('h2.tron-font'));
-    startMarquee(root);
   };
-
-  const bootstrap = () => {
-    const root = document.querySelector<HTMLElement>('#contactDetailedView');
-    if (root) setupContact(root);
-  };
-  document.addEventListener('astro:page-load', bootstrap);
-  if (document.readyState !== 'loading') {
-    bootstrap();
-  } else {
-    document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
-  }
 
   (window as unknown as { __contactHooks?: unknown }).__contactHooks = {
     start: startContact,

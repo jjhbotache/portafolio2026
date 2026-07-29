@@ -9,11 +9,9 @@
   - [✅]enhance UI of the cards
   - [✅]bring content
 - [✅]change titles in animation
-- [ ]finish about section
-- [ ]finish contact section
-- [ ]adding direct menu links to each section
+- [✅]finish about section
+- [✅]finish contact section
 - [ ]tutorial with driver js
 - [ ]adding support for mobile
 - [ ]adding models for english titles
 - [ ]adding support for en/es for the content
-- [ ]adding pixeled animation to clear

@@ -14,7 +14,7 @@ const bloomResolutionScale = 1/8;
 const pixelRatio = .7;
 export const DETAIL_VIEW_PIXEL_RATIO = 0.2;
 const FPS = 14;
-const deactivateBloom = true;
+const deactivateBloom = false;
 
 const bloomResolution = {
   width: window.innerWidth * bloomResolutionScale,
