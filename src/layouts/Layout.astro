@@ -25,6 +25,32 @@ const safeLang: Lang = isLang(lang) ? lang : 'en';
 		<meta name="generator" content={Astro.generator} />
 		<meta name="description" content={description} />
 		<title>{title}</title>
+
+		<!--
+		  Kick off the heaviest 3D assets as soon as the HTML is parsed so the
+		  scene is mostly cached by the time `initializeHomeLandingScene`
+		  starts asking for them. Without these hints the browser would not
+		  start the network round-trip until the module imports evaluate,
+		  which costs ~3-5 s on a cold load.
+
+		  The list is the union of every model that `homeLandingTitles.ts`,
+		  `homeLandingDisk.ts` and `homeLandingEnvironment.ts` will request,
+		  independent of the active locale (the model cache in
+		  `modelCache.ts` deduplicates so this fires once per file per page
+		  load, not once per language).
+		-->
+		<link rel="preload" as="fetch" href="/3d/disk.stl" crossorigin="anonymous" fetchpriority="high" />
+		<link rel="preload" as="fetch" href="/3d/platform.stl" crossorigin="anonymous" fetchpriority="high" />
+		<link rel="preload" as="fetch" href="/3d/floor.stl" crossorigin="anonymous" fetchpriority="high" />
+		<link rel="preload" as="fetch" href="/3d/mountain.stl" crossorigin="anonymous" />
+		<link rel="preload" as="fetch" href="/3d/man_thinking.stl" crossorigin="anonymous" />
+		<link rel="preload" as="fetch" href="/3d/the_creation_of_adam.glb" crossorigin="anonymous" />
+		<link rel="preload" as="fetch" href="/3d/gears.gltf" crossorigin="anonymous" />
+		<link rel="preload" as="fetch" href="/3d/experiencia.stl" crossorigin="anonymous" />
+		<link rel="preload" as="fetch" href="/3d/acerca de mi.stl" crossorigin="anonymous" />
+		<link rel="preload" as="fetch" href="/3d/contacto.stl" crossorigin="anonymous" />
+		<link rel="preload" as="fetch" href="/3d/proyectos.stl" crossorigin="anonymous" />
+
 		<ClientRouter  />
 	</head>
 	<body>

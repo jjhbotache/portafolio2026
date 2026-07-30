@@ -128,12 +128,12 @@ const projects = await getCollection('projects');
                   muted
                   playsinline
                   loop
-                  preload="metadata"
-                  autoplay
+                  preload="none"
+                  data-lazy-video
                   controls
                 />
                 <img
-                  src={proj.data.img}
+                  data-src={proj.data.img}
                   alt={t(lang, 'projects.card.coverAlt', { title: proj.data.title[lang] })}
                   class="absolute inset-0 w-full h-full object-cover transition-opacity duration-300
                   group-[.is-expanded]:opacity-0  group-[.is-expanded]:hidden"
@@ -142,6 +142,7 @@ const projects = await getCollection('projects');
                   loading="lazy"
                   decoding="async"
                   fetchpriority="low"
+                  data-lazy-img
                 />
                 <div class="absolute top-1 right-1 bg-black/60 text-white/80 text-[10px] px-1.5 py-0.5 rounded opacity-0 transition-opacity duration-300
                 group-[.is-expanded]:opacity-100">
@@ -342,10 +343,86 @@ const projects = await getCollection('projects');
     }
   };
 
+  // Lazy-load project videos: only fetch metadata + start playback when the
+  // card is expanded, pause when collapsed. Avoids burning bandwidth on
+  // every project's video at page load.
+  const setupLazyVideos = () => {
+    const cards = document.querySelectorAll<HTMLElement>('.project-card');
+    cards.forEach((card) => {
+      const video = card.querySelector<HTMLVideoElement>('video[data-lazy-video]');
+      if (!video) return;
+
+      const sync = () => {
+        const expanded = card.classList.contains('is-expanded');
+        if (expanded) {
+          // Bump preload so the browser actually fetches metadata, but only
+          // on the first expand. Subsequent expands resume from where we
+          // paused without re-loading.
+          if (video.preload === 'none') {
+            video.preload = 'metadata';
+            try { video.load(); } catch { /* noop */ }
+          }
+          const p = video.play();
+          if (p && typeof p.catch === 'function') {
+            p.catch(() => { /* autoplay blocked, ignore */ });
+          }
+        } else {
+          video.pause();
+        }
+      };
+
+      sync();
+
+      const observer = new MutationObserver(sync);
+      observer.observe(card, { attributes: true, attributeFilter: ['class'] });
+    });
+  };
+
+  // Lazy-load project cover images: only fetch when the projects section
+  // is actually shown. We watch the wrapper's visibility instead of the
+  // cards so the work happens once per section open, not per card.
+  const setupLazyImages = (wrapper: HTMLElement) => {
+    const imgs = document.querySelectorAll<HTMLImageElement>('img[data-lazy-img]');
+    if (imgs.length === 0) return;
+
+    const reveal = () => {
+      imgs.forEach((img) => {
+        if (img.dataset.src && !img.src) {
+          img.src = img.dataset.src;
+        }
+      });
+    };
+
+    // If the browser doesn't support IntersectionObserver, just load now.
+    if (typeof IntersectionObserver === 'undefined') {
+      reveal();
+      return;
+    }
+
+    // Reveal when the section actually has any visible area. A 1% threshold
+    // is enough to trigger as soon as the wrapper enters the viewport.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            reveal();
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.01 }
+    );
+    observer.observe(wrapper);
+  };
+
   // Run on initial page load and after Astro's client-side navigation.
   const bootstrap = () => {
     const root = document.querySelector<HTMLElement>('#projectsDetailedView');
-    if (root) setupProjects(root);
+    if (root) {
+      setupProjects(root);
+      setupLazyVideos();
+      setupLazyImages(root);
+    }
   };
   document.addEventListener('astro:page-load', bootstrap);
   if (document.readyState !== 'loading') {

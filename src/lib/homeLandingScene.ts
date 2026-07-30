@@ -8,7 +8,8 @@ import { sections } from './sections';
 import { detectGpuCapabilities  } from './gpuCapabilities';
 import * as THREE from 'three';
 import type { Lang } from '../i18n/utils';
-
+import { driver } from "driver.js";
+import "driver.js/dist/driver.css";
 
 const cameraTargetYPosition = 1.5;
 
@@ -161,13 +162,13 @@ const buildLandingTimeline = async (
 };
 
 
-function startTutorialIfNeeded(overlay: HTMLElement | null) {
+function startTutorialIfNeeded(overlay: HTMLElement | null,forceShow: boolean = false) {
   if (!overlay) return;
 
   try {
     const key = 'landing_tutorial_shown_count';
     const shownCount = Number(localStorage.getItem(key) ?? 0);
-    if (!isNaN(shownCount) && shownCount >= 2) return;
+    if (!isNaN(shownCount) && shownCount >= 2 && !forceShow) return;
 
     const tutorialOverlay = overlay.querySelector('#tutorial-overlay') as HTMLElement | null;
     const tutorialIcon = overlay.querySelector('#tutorial-icon') as HTMLElement | null;
@@ -231,6 +232,44 @@ function startTutorialIfNeeded(overlay: HTMLElement | null) {
   }
 }
 
+function startDriver() {
+  // only start if it hasn't been started before (verify in localStorage)
+  if (
+    typeof window !== 'undefined' &&
+    window.localStorage &&
+    window.localStorage.getItem('driverStarted') === 'true'
+  ) {
+    document.querySelector("#tutorial-overlay")?.remove();
+    return;
+  }
+
+  const driverObj = driver({
+    showProgress: true,
+    onDestroyed: () => {
+      document.querySelector("#cursor-icon-tutorial")?.classList.add("hidden");
+      document.querySelector("#tutorial-overlay")?.remove();
+      // mark as started in localStorage so we don't show it again
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('driverStarted', 'true');
+      }
+    },
+    onNextClick: (element,step) => {
+      // console.log(element,step);
+      
+      if(step.element==="#driverjs-tutorial") document.querySelector("#cursor-icon-tutorial")?.classList.remove("hidden");
+      
+      driverObj.moveNext();
+    },
+    steps: [
+      { element: '#driverjs-tutorial', popover: { title: 'Explora', description: 'Clickea en el titulo o el objeto de fondo para explorar cada sección.' },advanceOnClick: true, },
+      { element: '#tutorial-overlay', popover: { title: 'Desliza', description: 'Mueve la camara para navegar por las secciones.' },advanceOnClick: true, },
+      
+    ]
+  });
+
+  driverObj.drive();
+}
+
 function SpaceIntroAnimation3D(landingScene: LandingScene) {
   if (!landingScene) {
     return;
@@ -248,6 +287,8 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
     onComplete: () => {
       isSpaceIntroPlaying = false;
       landingScene.showTitles();
+      startDriver();
+      
       startTutorialIfNeeded(landingScene.overlay);
       document.removeEventListener('click', skipAnimation);
       window.scrollTo(0, scrollerPos);
@@ -273,7 +314,11 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
     .slice(1)
     .reduce((distance, point, index) => distance + point.distanceTo(cameraPathAnchors[index]), 0);
 
-  const samplesCount = MathUtils.clamp(Math.round(totalPathDistance * 8), 40, 140);
+  // 30-50 keyframes is the sweet spot for a ~3-unit camera flythrough:
+  // any denser and the tween scheduling dominates the wall time without
+  // producing visible motion improvement. The previous `*8` clamp at
+  // [40, 140] was effectively always pinning at 140.
+  const samplesCount = MathUtils.clamp(Math.round(totalPathDistance * 4), 30, 50);
   const sampledPoints = cameraPathCurve.getPoints(samplesCount);
   const moveDuration = 2;
   const stepDuration = moveDuration / samplesCount;
@@ -811,6 +856,13 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
   };
 }
 
+// Track the currently mounted landing scene so repeated inits (SPA
+// navigation) can dispose the previous one before constructing a new one.
+// Without this guard each navigation built a fresh scene and leaked the
+// previous one (render loop, listeners, GPU textures), which is what
+// produced the duplicated fetches visible in the Network panel.
+let activeLandingScene: LandingScene | null = null;
+
 export const initializeHomeLandingScene = async (lang: Lang = 'en') => {
   window.scrollTo(0, 0);
 
@@ -818,7 +870,31 @@ export const initializeHomeLandingScene = async (lang: Lang = 'en') => {
   const overlay = document.querySelector('#three-overlay') as HTMLElement | null;
   const contentEl = document.querySelector('#content');
 
+  // Dispose any scene left over from a previous init (SPA navigation,
+  // language toggle, ...). The model cache survives the dispose so the
+  // next scene skips re-downloading every STL/GLTF.
+  if (activeLandingScene) {
+    try {
+      activeLandingScene.dispose();
+    } catch (err) {
+      console.warn('Landing scene dispose error:', err);
+    }
+    activeLandingScene = null;
+  }
+
+  // Drain any lightweight cleanups the previous init registered (e.g.
+  // wheel/touchmove listeners installed by `buildLightweightIntro`).
+  // Without this drain they would accumulate across SPA navigations.
+  lightCleanupFns.splice(0).forEach((fn) => {
+    try {
+      fn();
+    } catch (err) {
+      console.warn('Light cleanup error:', err);
+    }
+  });
+
   const landingScene = createHomeLandingThreeScene(overlay, lang);
+  activeLandingScene = landingScene;
 
   if (!heroMask) {
     return;
@@ -828,7 +904,7 @@ export const initializeHomeLandingScene = async (lang: Lang = 'en') => {
     ? setupDetailViewToggle(landingScene, overlay)
     : null;
 
-  
+
 
   // Register a one-shot `pagehide` cleanup for any lightweight state
   // accumulated during this init. Guarded so multiple inits (SPA
@@ -838,6 +914,14 @@ export const initializeHomeLandingScene = async (lang: Lang = 'en') => {
     window.addEventListener(
       'pagehide',
       () => {
+        if (activeLandingScene) {
+          try {
+            activeLandingScene.dispose();
+          } catch (err) {
+            console.warn('Landing scene dispose error:', err);
+          }
+          activeLandingScene = null;
+        }
         lightCleanupFns.splice(0).forEach((fn) => {
           try {
             fn();
@@ -861,7 +945,7 @@ export const initializeHomeLandingScene = async (lang: Lang = 'en') => {
   if (landingArrow) {
     setTimeout(() => {
       landingArrow.style.opacity = '1';
-    }, 10);
+    }, 50);
   }
 };
 

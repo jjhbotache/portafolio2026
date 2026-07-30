@@ -11,7 +11,8 @@
 - [✅]change titles in animation
 - [✅]finish about section
 - [✅]finish contact section
-- [ ]tutorial with driver js
+- [✅]tutorial with driver js
+- [✅] Enhance site performance
 - [ ]adding support for mobile
 - [ ]adding models for english titles
 - [ ]adding support for en/es for the content

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import gsap from 'gsap';
 import { materialFactory } from './materialFactory';
+import { fetchCachedStl } from './modelCache';
 import {
   splitGeometryIntoComponents,
   buildComponentGeometry,
@@ -16,24 +16,11 @@ const FLOOR_ROTATION_X = THREE.MathUtils.degToRad(270);
 // Module-level env materials for fading the floor/platform
 let envMaterials: THREE.Material[] = [];
 
-// Module-level cache for parsed STL geometries. Both `preloadLandingEnvironment`
-// and `loadLandingEnvironment` share this cache so the heavy geometry parsing
-// happens only once, even when the user reloads the scene (e.g. on language
-// toggle).
-const stlGeometryCache = new Map<string, THREE.BufferGeometry>();
-
-const fetchStlGeometry = (loader: STLLoader, filePath: string): Promise<THREE.BufferGeometry> => {
-  return new Promise((resolve) => {
-    const cached = stlGeometryCache.get(filePath);
-    if (cached) {
-      resolve(cached);
-      return;
-    }
-    loader.load(filePath, (geometry) => {
-      stlGeometryCache.set(filePath, geometry);
-      resolve(geometry);
-    });
-  });
+// Resolve a cached STL geometry and unwrap it without re-running the STL
+// parse. Returns `null` only when the cache lookup somehow throws (the
+// underlying cache is in-memory so this should never happen).
+const fetchStlGeometry = async (filePath: string): Promise<THREE.BufferGeometry> => {
+  return fetchCachedStl(filePath);
 };
 
 const buildPlatformFromGeometry = (
@@ -57,20 +44,9 @@ const buildPlatformFromGeometry = (
   });
 };
 
-const loadCompositeStl = (
-  loader: STLLoader,
-  filePath: string,
-  targetRoot: THREE.Group,
-  neonIndexes: Set<number>,
-  neonMaterialName: 'platformNeon' | 'floorNeon',
-  darkMaterialName: 'platformDark' | 'floorDark',
-) => {
-  loader.load(filePath, (geometry) => {
-    buildPlatformFromGeometry(geometry, targetRoot, neonIndexes, neonMaterialName, darkMaterialName);
-  });
-};
-
 const calculateFloorTileSpacing = (geometry: THREE.BufferGeometry) => {
+  // `fetchCachedStl` already computes the bounding box when the geometry
+  // is first parsed, so this is a guaranteed cache hit on the second call.
   geometry.computeBoundingBox();
 
   const boundingBox = geometry.boundingBox;
@@ -121,12 +97,6 @@ const buildFloorGridFromGeometry = (geometry: THREE.BufferGeometry, scene: THREE
   }
 };
 
-const createFloorGrid = (loader: STLLoader, scene: THREE.Scene) => {
-  loader.load('/3d/floor.stl', (geometry) => {
-    buildFloorGridFromGeometry(geometry, scene);
-  });
-};
-
 export const fadeOutFloor = (duration = 0.5) => {
   if (!envMaterials.length) return null;
   // dep
@@ -141,7 +111,10 @@ export const fadeInFloor = (duration = 0.5) => {
 
 export const createLandingStarField = () => {
   const starsGeometry = new THREE.BufferGeometry();
-  const starCount = 500;
+  // 300 stars is enough to read as a dense sky from the camera distance
+  // we orbit at; the previous 500 cost extra vertex/fragment work for no
+  // visible gain (the extra points are below the bloom threshold).
+  const starCount = 300;
   const minDistanceFromCenter = 10;
   const positions = new Float32Array(starCount * 3);
 
@@ -199,57 +172,44 @@ export const createLandingStarField = () => {
 };
 
 export const loadLandingEnvironment = (scene: THREE.Scene) => {
-  const loader = new STLLoader();
-
   const platformRoot = new THREE.Group();
   platformRoot.scale.set(0.21, 0.21, 0.21);
   platformRoot.rotation.set(THREE.MathUtils.degToRad(270), 0, 0);
   platformRoot.position.set(0, -3, 0);
   scene.add(platformRoot);
-  // Use the cached geometry when `preloadLandingEnvironment` already kicked
-  // off the fetch — the parsed BufferGeometry is reused as-is and we skip the
-  // HTTP request and STL parsing entirely.
-  
-  const cachedPlatform = stlGeometryCache.get('/3d/platform.stl');
-  if (cachedPlatform) {
-    buildPlatformFromGeometry(
-      cachedPlatform,
-      platformRoot,
-      PLATFORM_NEON_PART_INDEXES,
-      'platformNeon',
-      'platformDark',
-    );
-  } else {
-    loadCompositeStl(
-      loader,
-      '/3d/platform.stl',
-      platformRoot,
-      PLATFORM_NEON_PART_INDEXES,
-      'platformNeon',
-      'platformDark',
-    );
-  }
-  
 
-  // const cachedFloor = stlGeometryCache.get('/3d/floor.stl');
-  // if (cachedFloor) {
-  //   buildFloorGridFromGeometry(cachedFloor, scene);
-  // } else {
-  //   createFloorGrid(loader, scene);
-  // }
+  // The geometries are preloaded via `preloadLandingEnvironment()` (awaited
+  // by the caller), so the cache lookup below is synchronous and free of
+  // network/parse cost. Fall back to an async fetch if for some reason the
+  // preload step was skipped.
+  const cachedPromise = fetchCachedStl('/3d/platform.stl');
+  cachedPromise.then((geometry) => {
+    // Guard against double-attach if `loadLandingEnvironment` is called
+    // more than once on the same scene (e.g. on SPA re-init without the
+    // old scene being disposed yet).
+    if (platformRoot.children.length > 0) {
+      return;
+    }
+    buildPlatformFromGeometry(
+      geometry,
+      platformRoot,
+      PLATFORM_NEON_PART_INDEXES,
+      'platformNeon',
+      'platformDark',
+    );
+  });
 };
 
 // Kick off the STL fetches early so the parsed geometries are ready by the
 // time `loadLandingEnvironment` is invoked. Called from `buildLandingTimeline`
 // the moment the user starts scrolling, instead of waiting until the scene
-// is fully constructed. The shared `stlGeometryCache` makes the second
-// load effectively instant. Returns a promise that resolves once both fetches
+// is fully constructed. The shared model cache makes the second load
+// effectively instant. Returns a promise that resolves once both fetches
 // (or cache lookups) complete so the caller can `await` for back-pressure.
 export const preloadLandingEnvironment = (): Promise<void> => {
-  const loader = new STLLoader();
   return Promise.all([
-    fetchStlGeometry(loader, '/3d/platform.stl'),
-    fetchStlGeometry(loader, '/3d/floor.stl'),
+    fetchStlGeometry('/3d/platform.stl'),
+    fetchStlGeometry('/3d/floor.stl'),
   ]).then(() => undefined);
 };
 

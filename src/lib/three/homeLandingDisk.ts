@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import gsap from 'gsap';
 import { addPlanarUvs, materialFactory } from './materialFactory';
+import { fetchCachedStl } from './modelCache';
 import {
   splitGeometryIntoComponents,
   buildComponentGeometry,
@@ -47,9 +47,11 @@ const applyDiskWobbleAnimation = (diskGroup: THREE.Mesh) => {
 
 export const loadLandingDisk = (diskRoot: THREE.Group) => {
   diskRootRef = diskRoot;
-  const stlLoader = new STLLoader();
 
-  stlLoader.load('/3d/disk.stl', (geometry) => {
+  // Use the shared cache: re-initialising the scene (SPA nav, language
+  // toggle, ...) will reuse the parsed geometry instead of re-downloading
+  // the ~30 MB STL.
+  fetchCachedStl('/3d/disk.stl').then((geometry) => {
     const { components, positions } = splitGeometryIntoComponents(geometry);
 
     components.forEach((componentFaces, partIndex) => {

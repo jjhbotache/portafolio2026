@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { materialFactory } from './materialFactory';
+import { fetchCachedStl, fetchCachedGltf } from './modelCache';
 import { sections, resolveSectionModelPath, type SectionConfig } from '../sections';
 import type { Lang } from '../../i18n/utils';
 import type { TitleBackgroundController } from './titlesBackgrounds/types';
@@ -41,7 +40,6 @@ const setTitleOpacity = (title: LandingTitle, opacity: number) => {
 };
 
 const loadTitleModel = (
-  loader: STLLoader,
   path: string,
   root: THREE.Group,
   backdropRoot: THREE.Group,
@@ -64,11 +62,14 @@ const loadTitleModel = (
 
   root.add(titleGroup);
 
-  loader.load(
-    path,
-    (geometry) => {
+  // Use the shared model cache so re-creating the landing scene (SPA nav,
+  // language toggle, ...) hits the parsed BufferGeometry instead of
+  // downloading the STL again.
+  fetchCachedStl(path)
+    .then((geometry) => {
+      // Skip the `computeBoundingBox` here: `fetchCachedStl` already ran it
+      // when the geometry first resolved, so the cached version has it.
       geometry.computeVertexNormals();
-      geometry.computeBoundingBox();
 
       const bounds = geometry.boundingBox;
       if (bounds) {
@@ -85,12 +86,10 @@ const loadTitleModel = (
       titleGroup.add(mesh);
       title.materials.push(material);
       title.loaded = true;
-    },
-    undefined,
-    () => {
+    })
+    .catch(() => {
       title.loaded = false;
-    },
-  );
+    });
 
   return title;
 };
@@ -100,8 +99,6 @@ export const createLandingTitles = (
   camera: THREE.PerspectiveCamera,
   lang: Lang = 'en',
 ) => {
-  const stlLoader = new STLLoader();
-  const gltfLoader = new GLTFLoader();
   // Each section declares its own background factory. We instantiate them all
   // up front so GSAP timelines, model references and Three.js state are owned
   // by this landing scene and can be safely disposed together.
@@ -127,7 +124,7 @@ export const createLandingTitles = (
   // renderer skips hidden backdrops entirely once a fade-out completes.
   const backdropRoots: THREE.Group[] = buildTitleSequence(lang).map(() => new THREE.Group());
   const titles = buildTitleSequence(lang).map((path, index) =>
-    loadTitleModel(stlLoader, path, titlesRoot, backdropRoots[index]),
+    loadTitleModel(path, titlesRoot, backdropRoots[index]),
   );
 
   let activeIndex = 0;
@@ -155,33 +152,28 @@ export const createLandingTitles = (
         uniqueModelPaths.map(async (path) => {
           const lower = path.toLowerCase();
           if (lower.endsWith('.stl')) {
-            return await new Promise<[string, THREE.Object3D]>((resolve, reject) => {
-              stlLoader.load(
-                path,
-                (geometry) => {
-                  try {
-                    geometry.computeVertexNormals();
-                    geometry.computeBoundingBox();
-                    const mat = materialFactory('platformDark');
-                    const mesh = new THREE.Mesh(geometry, mat);
-                    const group = new THREE.Group();
-                    group.add(mesh);
-                    resolve([path, group]);
-                  } catch (err) {
-                    reject(err);
-                  }
-                },
-                undefined,
-                (err) => reject(err),
-              );
-            });
+            // Cache hits return the same BufferGeometry that the title
+            // loader used (when applicable), so the only per-scene work
+            // here is wrapping it in a fresh Mesh + Group.
+            const geometry = await fetchCachedStl(path);
+            geometry.computeVertexNormals();
+            const mat = materialFactory('platformDark');
+            const mesh = new THREE.Mesh(geometry, mat);
+            const group = new THREE.Group();
+            group.add(mesh);
+            return [path, group] as const;
           }
 
-          const gltf = await gltfLoader.loadAsync(path);
-          if (gltf.animations && gltf.animations.length) {
-            animationsByModel.set(gltf.scene, gltf.animations);
+          const cached = await fetchCachedGltf(path);
+          // Clone the cached scene so this scene owns its Object3D graph.
+          // Without cloning, two landing scenes would share the same root
+          // and any state mutation (visibility, transforms, ...) would
+          // leak between them.
+          const sceneClone = cached.scene.clone(true);
+          if (cached.animations.length) {
+            animationsByModel.set(sceneClone, cached.animations);
           }
-          return [path, gltf.scene] as const;
+          return [path, sceneClone] as const;
         }),
       );
 

@@ -55,19 +55,6 @@ const descriptionByLang: Record<Lang, string> = {
     
   </div>
   
-  <div id="three-overlay" aria-hidden="true">
-    <div id="tutorial-overlay" aria-hidden="true">
-      <div id="tutorial-icon" class="tutorial-icon" aria-hidden="true">
-        <!-- Cursor icon (desktop) -->
-        <Icon name="cursor" id="cursor-icon" class="w-24 h-24 text-secondary" />
-
-        <!-- Tap icon (touch) -->
-        <Icon name="tap" id="tap-icon" class="w-24 h-24 text-secondary" />
-
-      </div>
-    </div>
-  </div>
-
   <!-- a 3*3 grid -->
   <div id="detail-overlay" class="fixed inset-0 z-50 opacity-0 overflow-y-auto pointer-events-none hidden grid-cols-3 grid-rows-3  transition-opacity duration-300 backdrop-blur-xs" >
     <ExperienceDetail lang={lang} />
@@ -76,12 +63,22 @@ const descriptionByLang: Record<Lang, string> = {
     <ProjectsDetail lang={lang} />
   </div>
   
+  
+
+  
   <!-- dev -->
   <!-- <div class="h-screen w-full absolute top-0 left-0 bg-[#222]">
-  
-  
   </div> -->
 
+  <div id="three-overlay" aria-hidden="true"/>
+  
+  
+  <div id="tutorial-overlay"> 
+    <div id="driverjs-tutorial" class="absolute z-50 left-[50%] top-[50%] transform -translate-x-1/2 -translate-[65%]  w-[50vw] h-[65vh] "/>
+    
+    <Icon name="cursor" id="cursor-icon-tutorial" class="hidden " />
+    
+  </div>
 </Layout>
 
 
@@ -143,53 +140,40 @@ const descriptionByLang: Record<Lang, string> = {
     transform: scale(1.5);
   }
 
-    #three-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 40;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.4s ease;
-      background: #020617;
-      pointer-events: none;
-    }
+  #three-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease;
+    background: #020617;
+    pointer-events: none;
+  }
 
-    #three-overlay canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    /* Tutorial overlay */
-    #tutorial-overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 60;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.2s ease, visibility 0.2s ease;
-    }
-
-    #tutorial-overlay.visible {
-      opacity: 1;
-      visibility: visible;
-      pointer-events: auto;
-    }
-
-    #tutorial-icon {
-      width: 96px;
-      height: 96px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transform-origin: 50% 50%;
-      color: #8b5cf6; /* tailwind secondary-ish */
-      filter: drop-shadow(0 8px 20px rgba(0,0,0,0.5));
-    }
-
+  #three-overlay canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  /* Tutorial overlay */
+  #tutorial-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+  }
+  #cursor-icon-tutorial {
+    width: 96px;
+    height: 96px;
+    color: #8b5cf6; /* tailwind secondary-ish */
+    filter: drop-shadow(0 8px 20px rgba(0,0,0,0.5));
+    transition: all 0.3s ease-in-out;
+    animation: corner-to-corner 4s ease-in-out infinite alternate;
+  }
+  @keyframes corner-to-corner {
+    from { transform: translate(calc(95vw - 96px), 50vh); }
+    to { transform: translate(5vw, 50vh); }
+  }
 
 
     /* show cursor by default, show tap on coarse pointers (touch) */
