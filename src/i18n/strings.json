@@ -1,5 +1,6 @@
 {
   "es": {
+    "hero-subtitle": "Curioso por naturaleza, creador por elección.",
     "nav.lang.toggle": "Cambiar a inglés",
     "nav.lang.shortLabel": "EN",
     "nav.lang.fullLabel": "English",
@@ -25,9 +26,11 @@
     "projects.modal.techsLabel": "Tecnologías",
     "experience.noImages": "Sin imágenes",
     "experience.viewMore": "ver más",
+    "experience.closeDetail": "toca para cerrar",
     "months.short": ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
   },
   "en": {
+    "hero-subtitle": "Curious by nature, creator by choice.",
     "nav.lang.toggle": "Switch to Spanish",
     "nav.lang.shortLabel": "ES",
     "nav.lang.fullLabel": "Español",
@@ -53,6 +56,7 @@
     "projects.modal.techsLabel": "Technologies",
     "experience.noImages": "No images",
     "experience.viewMore": "view more",
+    "experience.closeDetail": "tap to close",
     "months.short": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
   }
 }

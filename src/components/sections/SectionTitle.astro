@@ -25,17 +25,19 @@ interface Props {
   sectionId?: string;
   size?: 'default' | 'large';
   dualLanguage?: boolean;
+  fullColSpan?: boolean;
 }
 
 const {
   titleKey,
   lang,
   sectionId,
+  fullColSpan = false,
 } = Astro.props as Props;
 ---
 
   <h2
-    class={`neon-text col-start-1 col-span-2 row-start-1 self-start justify-self-start pt-6 pl-20 text-6xl  pointer-events-auto tron-font text-secondary`}
+    class={`neon-text col-start-1 col-span-${fullColSpan ? 3 : 2} row-start-1 self-start justify-self-start pt-6 pl-20 text-3xl md:text-6xl  pointer-events-auto tron-font text-secondary`}
     data-lang={lang}
     data-section-id={sectionId}
     data-section-detail

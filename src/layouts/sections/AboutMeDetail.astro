@@ -29,6 +29,8 @@ const duplicatedRows = technologyCategories.map((category) => ({
   duplicated: [...orderTechs(category.items), ...orderTechs(category.items)],
 }));
 
+
+
 // Render both language variants so the client-side JS can flip between them
 // on language change without re-mounting the section.
 ---
@@ -43,6 +45,7 @@ const duplicatedRows = technologyCategories.map((category) => ({
   sectionId="aboutMe"
   titleKey="sections.aboutMe.title"
   lang={lang}
+  fullColSpan
 />
 
 <!-- about me body. The gradient lives on the inner div because GSAP tweens
@@ -50,8 +53,8 @@ const duplicatedRows = technologyCategories.map((category) => ({
      section the tween would mutate a no-op property. -->
 <section class="col-start-1 row-start-2 col-span-3 font-pixeloid">
   <div id="expanded-section-body" class="h-full w-full flex justify-center items-center text-white bg-linear-to-r from-black/20 via-black/50 to-black/20 bg-size-[0%_100%] bg-center bg-no-repeat backdrop-blur-3xl">
-    <div class="max-w-md h-full flex flex-col items-center justify-stretch py-3 text-center gap-4">
-      <p class="text-center text-sm basis-full flex items-start justify-center" id="aboutMeBodyText" data-source-text={t(lang, 'sections.aboutMe.body')} /> 
+    <div class="max-w-md h-full flex flex-col items-center justify-evenly md:justify-stretch py-3 text-center gap-4 px-2 md:px-0">
+      <p class="text-center text-sm md:basis-full flex items-start justify-center" id="aboutMeBodyText" data-source-text={t(lang, 'sections.aboutMe.body')} /> 
       <a href="/cv.pdf" target="_blank" rel="noopener noreferrer" class="flex opacity-0 gap-2 hover:underline group"  >
         <span
           class="cv-download-label text-sm md:text-base font-semibold uppercase tracking-widest"
@@ -97,7 +100,7 @@ const duplicatedRows = technologyCategories.map((category) => ({
                 decoding="async"
                 class="tech-marquee-icon"
               />
-              <span class="tech-marquee-name">{tech.name}</span>
+              <span class="tech-marquee-name ">{tech.name}</span>
             </a>
           ))}
         </div>
@@ -107,7 +110,7 @@ const duplicatedRows = technologyCategories.map((category) => ({
  </section>
 
   <!-- 3D model anchor and close button shared by every detail section. -->
-  <ModelBgAnchor/>
+  <ModelBgAnchor mobileStyle='right-0 top-1/2 translate-x-[30%] -translate-y-[100%]' />
   <DetailCloseButton lang={lang} />
 </div>
 <style>
@@ -259,6 +262,9 @@ const duplicatedRows = technologyCategories.map((category) => ({
   import { gsap } from 'gsap';
   import {TextPlugin} from 'gsap/TextPlugin';
   import { playTitleIntroAnimation } from '../../lib/sectionTitleReveal';
+  
+  const isMobile = window.innerWidth < 768;
+  
   gsap.registerPlugin(TextPlugin);
   const MIN_TYPING_DURATION_S = 1.5; // seconds
   const TYPING_SPEED_MS = 20; // milliseconds per character
@@ -286,7 +292,7 @@ const duplicatedRows = technologyCategories.map((category) => ({
       {
         backgroundSize: '200% 100%',
         duration: 2,
-        ease: 'power2.inOut',
+        ease: 'power2.out',
       },
     );
     // typewriter effect

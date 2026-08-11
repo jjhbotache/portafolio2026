@@ -60,18 +60,18 @@ const duplicatedIcons = [...contactIcons, ...contactIcons];
        keeps `data-lang` so applyLangToDOM() can show/hide the right
        language variant on toggle. -->
   <section
-    class="col-start-1 row-start-1 col-span-3 row-span-3 flex flex-col items-start justify-center gap-8 px-6 text-center
+    class="col-start-1 row-start-1 col-span-3 row-span-3 flex flex-col items-center md:items-start justify-center gap-8 px-6 text-center
      bg-black/60 backdrop-blur-md -z-1 overflow-hidden font-pixeloid"
     data-section-content
   >
     <p
-      class="text-base md:text-lg text-white/70 max-w-xl text-start"
+      class="text-base md:text-lg text-white/70 max-w-xl text-center md:text-start"
       data-lang={lang}
     >{t(lang, 'sections.contact.body')}</p>
 
     <a
       href={`mailto:${CONTACT_EMAIL}`}
-      class="font-pixeloid uppercase tracking-widest text-2xl md:text-4xl lg:text-5xl text-white/95 hover:text-white underline underline-offset-[6px] decoration-white/30 hover:decoration-white/80 transition-colors break-all"
+      class="font-pixeloid uppercase tracking-widest text-xl md:text-4xl 2xl:text-5xl text-white/95 hover:text-white  underline md:decoration-none md:border-b-2 border-white/30 hover:border-white/80  decoration-white/30 hover:decoration-white/80 transition-colors break-all flex flex-col gap-1.5 md:flex-row md:items-end md:gap-0"
       target="_blank"
     >
       {CONTACT_EMAIL.split('@')[0]}<span class="text-sm text-white/50 ">@{CONTACT_EMAIL.split('@')[1]}</span>
@@ -90,8 +90,8 @@ const duplicatedIcons = [...contactIcons, ...contactIcons];
     </p>
     <!-- Row 3: infinite icon marquee. Animation is identical to the tech
          marquees in AboutMeDetail.astro. -->
-    <section class="fixed bottom-0 left-32 w-50% overflow-hidden  transform translate-x-[0%] -translate-y-[90%]  -rotate-25">
-      <div class="tech-marquee-row w-full transform translate-x-[10%]">
+    <section class="fixed bottom-0 left-0 md:left-32 w-full md:w-50% overflow-hidden  transform md:translate-x-[0%] -translate-y-[120%] md:-translate-y-[30%] 2xl:-translate-y-[25%]  md:-rotate-24 ">
+      <div class="tech-marquee-row w-full transform md:translate-x-[10%]">
         <div class="tech-marquee-mask">
           <div
             class="tech-marquee-track"
@@ -120,7 +120,7 @@ const duplicatedIcons = [...contactIcons, ...contactIcons];
   <!-- 3D model anchor and close button shared by every detail section. The
        Contact anchor sits centred so the 3D model lines up with the
        marquee. -->
-  <ModelBgAnchor position="center" />
+  <ModelBgAnchor position="center" mobileStyle=" transform -translate-x-1/2 top-2/12" />
   <DetailCloseButton lang={lang} />
 </div>
 
@@ -166,9 +166,12 @@ const duplicatedIcons = [...contactIcons, ...contactIcons];
     filter: saturate(0) brightness(0.7);
     transition: all 0.4s ease;
   }
-  .tech-marquee-track:hover {
-    animation-play-state: paused;
-    filter: saturate(1) brightness(1);
+  /* only for medium and larger screens */
+  @media (min-width: 768px) {
+    .tech-marquee-track:hover {
+      animation-play-state: paused;
+      filter: saturate(1) brightness(1);
+    }
   }
 
   @keyframes marquee-scroll {
@@ -196,8 +199,8 @@ const duplicatedIcons = [...contactIcons, ...contactIcons];
   }
 
   .tech-marquee-icon {
-    width: 10rem;
-    height: 10rem;
+    width: 10em;
+    height: 10em;
     flex-shrink: 0;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
   }
@@ -213,11 +216,26 @@ const duplicatedIcons = [...contactIcons, ...contactIcons];
       padding: 0.4rem 0.7rem;
     }
     .tech-marquee-icon {
-      width: 1.4rem;
-      height: 1.4rem;
+      width: 5em;
+      height: 5em;
     }
     .tech-marquee-name {
       font-size: 0.75rem;
+    }
+    
+  }
+  
+  /* only for large screens */
+  @media (min-width: 1280px) {
+    .tech-marquee-item {
+      padding: 0.5rem 0.85rem;
+    }
+    .tech-marquee-icon {
+      width: 15em;
+      height: 15em;
+    }
+    .tech-marquee-name {
+      font-size: 0.85rem;
     }
   }
 </style>

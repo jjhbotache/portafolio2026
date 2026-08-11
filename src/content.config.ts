@@ -24,7 +24,7 @@ const experiences = defineCollection({
           url: z.url(),
         })
         ),
-        imgs: z.array(z.url()),
+        imgs: z.array(z.string()),
         technologies: z.object({
           es: z.array(z.string()),
           en: z.array(z.string())

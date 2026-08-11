@@ -17,7 +17,9 @@ const { lang, sectionId, storageKey, maxShowTimes = 3 } = Astro.props as Props;
 
 <div
   id={`${sectionId}ScrollTutorial`}
-  class="scroll-tutorial absolute right-50 bottom-50 z-20 flex flex-col items-center gap-1 pointer-events-none transition-opacity duration-500 opacity-0"
+  class="scroll-tutorial absolute bottom-1 right-[50%] transform translate-x-1/2 
+   md:right-50 md:bottom-50  md:translate-x-0
+   z-20 flex md:flex-col items-center gap-1 pointer-events-none transition-opacity duration-500 opacity-0"
   aria-hidden="true"
   data-tutorial-storage-key={storageKey}
   data-tutorial-max-shows={String(maxShowTimes)}
@@ -26,7 +28,7 @@ const { lang, sectionId, storageKey, maxShowTimes = 3 } = Astro.props as Props;
     {t(lang, 'sections.experience.scrollDown')}
   </span>
   <span class="scroll-tutorial-icon flex items-center justify-center animate-bounce">
-    <span class="text-secondary text-6xl font-pixeloid transform rotate-180">^</span>
+    <span class="text-secondary text-2xl md:text-6xl font-pixeloid transform rotate-180">^</span>
   </span>
 </div>
 

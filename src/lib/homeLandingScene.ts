@@ -89,7 +89,7 @@ const buildLandingTimeline = async (
     // the previous section's title before the fade-out completed.
     landingScene.hideTitles();
     gsap.set(landingScene.overlay, { autoAlpha: 0, pointerEvents: 'none' });
-    resetCameraToInitialPosition(landingScene.camera);
+    resetCameraToInitialPosition(landingScene.camera, gpu.isMobile);
     SpaceIntroPlayed = false;
   };
   // executed when the user scrolls down and reaches some percentage of the scroll
@@ -301,12 +301,22 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
   };
   document.addEventListener('click', skipAnimation);
 
-  const cameraPathAnchors = [
-    new Vector3(landingScene.camera.position.x, landingScene.camera.position.y, landingScene.camera.position.z),
-    new Vector3(0, 8, 2),
-    new Vector3(-4, 6, 0),
-    new Vector3(-4, 3, 0),
-  ];
+  // On mobile, use wider camera positions (farther from center) and set last anchor y to 7
+  const isMobile = gpu.isMobile;
+  const cameraPathAnchors = isMobile
+    ? [
+        new Vector3(landingScene.camera.position.x, landingScene.camera.position.y, landingScene.camera.position.z),
+        new Vector3(0, 10, 4),
+        new Vector3(-5, 8, 0),
+        new Vector3(-5, 3, 6),
+        
+      ]
+    : [
+        new Vector3(landingScene.camera.position.x, landingScene.camera.position.y, landingScene.camera.position.z),
+        new Vector3(0, 8, 2),
+        new Vector3(-4, 6, 4),
+        new Vector3(-4, 3, 0),
+      ];
 
   const cameraPathCurve = new CatmullRomCurve3(cameraPathAnchors, false, 'catmullrom', 0.6);
 
@@ -632,9 +642,9 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
           // do nothing
           // rotate the hands to face the camera
           rotationY += MathUtils.degToRad(45); 
-          rotationX += MathUtils.degToRad(-45); 
+          rotationX += MathUtils.degToRad(-15); 
           localTarget.z += 40;
-          localTarget.x += 170;
+          localTarget.x += 130;
         }
         if (group.id === 24) { // thinking man
           firstThinkingManRotationY = targetGroup.children[0].rotation.y;

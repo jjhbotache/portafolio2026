@@ -14,13 +14,13 @@ enterprises:
     logo: https://dpagos-platform-front.vercel.app/logo.svg
     url: https://dpagos-platform-front.vercel.app
 imgs:
-  - "https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Captura_de_pantalla_2025-04-17_155832_l4oywu_befdsq.png"
-  - "https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Captura_de_pantalla_2025-04-17_155942_sw3cfo_xy7q0t.png"
-  - "https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Captura_de_pantalla_2025-04-17_160011_bxkqzo_psnbic.png"
-  - "https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/dpagos_uj37xt.png"
-  - "https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Screenshot_24_xiqgar_hckrzw.png"
-  - "https://res.cloudinary.com/ddt7qdant/image/upload/v1757945606/Screenshot_23_ydrxt2_opzixd.png"
-  - "https://res.cloudinary.com/ddt7qdant/image/upload/v1757945607/Screenshot_25_k190iv_xgdk3d.png"
+  - "/experience/dpagosPlatform/dpagos1.png"
+  - "/experience/dpagosPlatform/dpagos2.png"
+  - "/experience/dpagosPlatform/dpagos3.png"
+  - "/experience/dpagosPlatform/dpagos4.png"
+  - "/experience/dpagosPlatform/dpagos5.png"
+  - "/experience/dpagosPlatform/dpagos6.png"
+  - "/experience/dpagosPlatform/dpagos7.png"
 technologies:
   es:
     - React

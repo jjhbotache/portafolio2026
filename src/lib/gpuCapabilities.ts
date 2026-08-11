@@ -36,6 +36,7 @@ export type GpuCapabilities = {
   score: number;
   tier: GpuTier;
   canRunHeavyAnimation: boolean;
+  isMobile: boolean;
 };
 
 /**
@@ -223,6 +224,7 @@ export const detectGpuCapabilities = (): GpuCapabilities => {
       score: 0,
       tier: 'low',
       canRunHeavyAnimation: false,
+      isMobile: false,
     };
   }
 
@@ -263,5 +265,6 @@ export const detectGpuCapabilities = (): GpuCapabilities => {
     score: rounded,
     tier,
     canRunHeavyAnimation: rounded >= GPU_SCORE_THRESHOLD,
+    isMobile,
   };
 };

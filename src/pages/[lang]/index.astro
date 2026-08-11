@@ -7,7 +7,6 @@ import ContactDetail from '../../layouts/sections/ContactDetail.astro';
 import ProjectsDetail from '../../layouts/sections/ProjectsDetail.astro';
 import LanguageToggle from '../../components/LanguageToggle.astro';
 import { isLang, t, type Lang } from '../../i18n/utils';
-import { marked } from 'marked';
 
 const rawLang = Astro.params.lang;
 const lang: Lang = isLang(rawLang) ? rawLang : 'en';
@@ -31,11 +30,14 @@ const descriptionByLang: Record<Lang, string> = {
     id="hero-mask"
     class="masked h-full w-full"
     >
-    <div id="content" class="relative flex items-center justify-end gap-10 h-screen bg-linear-to-br from-gray-900 to-gray-950">
-      <div class="basis-3/5 pr-[15em]">
-        <h1 class="pixel-font tracking-widest font-bold text-6xl  text-end bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
+    <div id="content" class="relative flex items-center justify-end gap-0 md:gap-10 h-screen bg-linear-to-br from-gray-900 to-gray-950 overflow-x-hidden">
+      <div class="pr-[5em] pixel-font basis-[85%] md:basis-3/5 md:pr-[15em] 2xl:pr-[16em] flex flex-col justify-center items-end gap-2 text-end">
+        <h1 class=" tracking-widest font-bold text-2xl md:text-6xl 2xl:text-8xl   bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
           Juan Jose Huertas
         </h1>
+        <small id="subtitle" class="text-[0.4em] md:text-[0.5em]  text-white/50 italic tracking-widest animate-fade-in  pr-1 md:pr-5">
+          {t(lang, 'hero-subtitle')}
+        </small>
       </div>
 
       <img
@@ -44,7 +46,7 @@ const descriptionByLang: Record<Lang, string> = {
         loading="lazy"
         decoding="async"
         fetchpriority="low"
-        class="fixed h-[110vh]  transform left-[25%] -translate-x-1/2 top-[65%] -translate-y-1/2 drop-shadow-secondary/20 drop-shadow-xl "
+        class="fixed h-[110vh]  transform left-[25%] -translate-x-1/2 top-[65%] -translate-y-1/2 drop-shadow-secondary/20 drop-shadow-xl opacity-15 md:opacity-100 "
       />
 
       <div id="landing-arrow" class=" fixed bottom-[15%] left-[50%] transform -translate-x-1/2 h-40 w-40 flex items-center justify-center animate-bounce transition-all opacity-0 duration-500" data-tutorial-icon>
@@ -56,7 +58,7 @@ const descriptionByLang: Record<Lang, string> = {
   </div>
   
   <!-- a 3*3 grid -->
-  <div id="detail-overlay" class="fixed inset-0 z-50 opacity-0 overflow-y-auto pointer-events-none hidden grid-cols-3 grid-rows-3  transition-opacity duration-300 backdrop-blur-xs" >
+  <div id="detail-overlay" class="fixed inset-0 z-50 opacity-0  pointer-events-none hidden grid-cols-3 grid-rows-3  transition-opacity duration-300 backdrop-blur-xs" >
     <ExperienceDetail lang={lang} />
     <AboutMeDetail lang={lang} />
     <ContactDetail lang={lang} />
@@ -115,6 +117,13 @@ const descriptionByLang: Record<Lang, string> = {
     mask-size: var(--landing-mask-size);
     -webkit-mask-position: var(--mask-pos);
     mask-position: var(--mask-pos);
+  }
+  /* if mobile */
+  @media (max-width: 768px) {
+    .masked {
+      --landing-mask-size: 1000%;
+      --mask-pos: 50% 70%;
+    }
   }
 
   .masked::before {
@@ -210,17 +219,35 @@ const descriptionByLang: Record<Lang, string> = {
         animation-duration: 1ms !important;
       }
     }
+    
 
 </style>
 
 <script>
   import { initializeHomeLandingScene } from '../../lib/homeLandingScene';
+  import { gsap } from 'gsap';
+  import { CustomEase } from 'gsap/CustomEase';
+  gsap.registerPlugin(CustomEase) 
 
   const seg = window.location.pathname.split('/').filter(Boolean)[0];
   const lang = seg === 'es' || seg === 'en' ? seg : 'en';
 
   initializeHomeLandingScene(lang as 'en' | 'es').catch((err) => {
     console.error('Failed to initialize landing scene:', err);
+  });
+    // module scope — fuera del bloque de init
+  const SUBTITLE_EASE = CustomEase.create(
+    "subtitleReveal",
+    "M0,0 C0.313,0.102 0.171,0.615 0.493,0.628 0.763,0.691 0.823,0.9 0.877,0.911 1,0.911 0.964,1 1,1",
+  );
+  gsap.set("#subtitle", { willChange: "clip-path" });
+  gsap.from("#subtitle", {
+    clipPath: "inset(0 101% 0 0)",
+    duration: 3,
+    ease: SUBTITLE_EASE,
+    onComplete: () => {
+      gsap.set("#subtitle", { willChange: "auto" }); // libera la capa
+    },
   });
 
 </script>

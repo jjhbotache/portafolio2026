@@ -9,14 +9,15 @@
 // marquee.
 interface Props {
   position?: 'right' | 'center';
+  mobileStyle?: string;
 }
 
 const { position = 'right' } = Astro.props as Props;
 const horizontal =
-  position === 'center' ? 'right-1/2 -translate-x-1/2' : 'right-0';
+  position === 'center' ? 'md:left-1/2 md:-translate-x-1/2' : 'md:left-full md:-translate-x-full';
 ---
 
 <div
   id="modelBg"
-  class={`fixed top-1/2 ${horizontal} w-[33vw] h-[33vh] transform -translate-y-1/2 pointer-events-none z-0`}
+  class={`fixed ${Astro.props.mobileStyle || ''} md:top-1/2 ${horizontal} w-[33vw] h-[33vh] transform -translate-y-1/2 pointer-events-none z-0  `}
 ></div>

@@ -48,12 +48,13 @@ export type LandingScene = {
   dispose: () => void;
 };
 
-export function resetCameraToInitialPosition(camera: THREE.PerspectiveCamera) {
+export function resetCameraToInitialPosition(camera: THREE.PerspectiveCamera, isMobile = false) {
   camera.position.x = -.75;
   camera.position.z = -1;
-  camera.position.y = 3;
-  // zoom the camera in a bit
-  camera.zoom = 5;
+  // On mobile, position the camera higher and farther for a wider view
+  camera.position.y = isMobile ? 5 : 3;
+  // On mobile, zoom out more (lower zoom value = wider view)
+  camera.zoom = isMobile ? 3 : 5;
   camera.updateProjectionMatrix();
 }
 

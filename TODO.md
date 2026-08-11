@@ -14,5 +14,15 @@
 - [✅]tutorial with driver js
 - [✅] Enhance site performance
 - [ ]adding support for mobile
-- [ ]adding models for english titles
+  - [✅]adding support for mobile (experiences)
+  - [✅]adding support for mobile (projects)
+  - [✅]adding support for mobile (contact)
+  - [✅]adding support for mobile (about)
+  
+- [✅]adding models for english titles
 - [ ]adding support for en/es for the content
+- [ ]fix videos
+- [ ]enhance media
+- [ ]adding experiences
+- [ ]cleanning projects
+

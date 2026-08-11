@@ -9,8 +9,8 @@ enterprises:
     logo: https://github.com/jjhbotache.png
     url: https://github.com/jjhbotache
 imgs:
-  - "https://res.cloudinary.com/ddt7qdant/image/upload/v1757945608/Screenshot_27_cgskb2_dgvojd.png"
-  - "https://res.cloudinary.com/ddt7qdant/image/upload/v1757945608/Screenshot_26_oynq8b_q7hggo.png"
+  - "/experience/venusAI/Screenshot_27_cgskb2_dgvojd.png"
+  - "/experience/venusAI/Screenshot_26_oynq8b_q7hggo.png"
 technologies:
   es:
     - Shadcn
