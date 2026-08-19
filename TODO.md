@@ -20,9 +20,36 @@
   - [✅]adding support for mobile (about)
   
 - [✅]adding models for english titles
-- [ ]adding support for en/es for the content
-- [ ]fix videos
-- [ ]enhance media
+- [✅]adding support for en/es for the content
+- [✅]fix tutorial in mobile
+- [✅]fix videos
+- [✅]adding support for tablet 
+- [ ]enhance media (img to .yxz)
 - [ ]adding experiences
 - [ ]cleanning projects
+- [ ]fixing bugs:
+  - [✅]fix change languaje bug
+  - [➖]UX posible enhance when back, close detailed view
+  - [✅]agregar text de saltar la animacion de entrada
+  - [✅]si el tuto se mostro en menos de 2 segundos, no se cuenta como mostrado. (repetir hasta 3 veces)
+  - [✅]fix btn names languaje driver tutorial
+  - [✅]posicion del tutorial de scroll arreglar
+  <!-- - [ ]add loading for load img fonts and whatever it's needed -->
+  - [✅]contact double botom border in tableet
+  - [✅]es/ing wrog languaje displayed
+  - [✅]muy largo el scroll del principio
+  - [✅]no siven links contacto
+  - [✅]faltan links a projectos en projects
+  - [✅]en projects, arreglar videos se muestra muy lento
+  - [✅]en projects, arreglar que animacion se muestre de abajo a arriba siempre
+  - [✅]en projects, arreglar videos que no corresponden
+  - [ ]transformar animaciones de proyectos a css puro, sin js:
+    - [✅]animacion de entrada del subtitulo
+  - [ ]va muy lento - primera vez
+  - [ ]dar soporte a safari browser
+  - [✅] arreglar linkedin
+  
+  
+  
+  
 

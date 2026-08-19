@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import type { Lang } from '../i18n/utils';
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
+import { getLangFromUrl, t } from '../i18n/utils';
 
 const cameraTargetYPosition = 1.5;
 
@@ -57,7 +58,7 @@ let isSpaceIntroPlaying = false;
 const lightCleanupFns: Array<() => void> = [];
 let lightPagehideRegistered = false;
 
-const scrollerPos =  1500;
+const scrollerPos =  400;
 gsap.registerPlugin(ScrollTrigger);
 const buildLandingTimeline = async (
   heroMask: Element,
@@ -65,7 +66,7 @@ const buildLandingTimeline = async (
   landingScene: LandingScene | null,
   onReset?: () => void,
 ) => {
-  let SpaceIntroPlayed = false;
+  let spaceIntroPlayed = false;
   let previousScrollYProgress = -1;
   
 
@@ -90,11 +91,11 @@ const buildLandingTimeline = async (
     landingScene.hideTitles();
     gsap.set(landingScene.overlay, { autoAlpha: 0, pointerEvents: 'none' });
     resetCameraToInitialPosition(landingScene.camera, gpu.isMobile);
-    SpaceIntroPlayed = false;
+    spaceIntroPlayed = false;
   };
   // executed when the user scrolls down and reaches some percentage of the scroll
   function triggerSpaceIntroAnimation() {
-        SpaceIntroPlayed = true;
+        spaceIntroPlayed = true;
         landingScene && SpaceIntroAnimation3D(landingScene);
   }
 
@@ -106,7 +107,7 @@ const buildLandingTimeline = async (
     trigger: heroMask,
     start: 'top top',
     end: '+=' + scrollerPos,
-    scrub: 1,
+    scrub: 0.1,
     pin: true,
     onEnterBack: reset3D,
     
@@ -180,6 +181,7 @@ function startTutorialIfNeeded(overlay: HTMLElement | null,forceShow: boolean = 
 
     // reveal
     tutorialOverlay.classList.add('visible');
+    tutorialOverlay.classList.remove('hidden');
     gsap.set(tutorialIcon, {y: "-25vh", x: "30vw", scale: 2, opacity: 0, transformOrigin: '50% 50%' });
 
     const tl = gsap.timeline({ repeat: -1 });
@@ -232,26 +234,46 @@ function startTutorialIfNeeded(overlay: HTMLElement | null,forceShow: boolean = 
   }
 }
 
-function startDriver() {
-  // only start if it hasn't been started before (verify in localStorage)
+function startDriver(lang: Lang) {
+  // mesure the time from start to end of the tutorial, if it is less than 2 seconds, we don't count it as a completed tutorial
+  let startTime: number | null = null;
+  let endTime: number | null = null;
+  
+  // show
+  document.querySelector("#tutorial-overlay")?.classList.remove("hidden");
+  
+  
+  
+  //  return if the tutorial has already been started more than x times (stored in localStorage)    
   if (
     typeof window !== 'undefined' &&
     window.localStorage &&
-    window.localStorage.getItem('driverStarted') === 'true'
+    (isNaN(Number(window.localStorage.getItem('driverStarted')!)) || Number(window.localStorage.getItem('driverStarted')!) > 2)
   ) {
-    document.querySelector("#tutorial-overlay")?.remove();
+    document.querySelector("#tutorial-overlay")?.classList.add("hidden");
     return;
   }
 
   const driverObj = driver({
     showProgress: true,
-    onDestroyed: () => {
-      document.querySelector("#cursor-icon-tutorial")?.classList.add("hidden");
-      document.querySelector("#tutorial-overlay")?.remove();
-      // mark as started in localStorage so we don't show it again
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem('driverStarted', 'true');
+    progressText: '{{current}} / {{total}}',
+    nextBtnText: t(lang, 'tutorial.next'),
+    prevBtnText: t(lang, 'tutorial.prev'),
+    doneBtnText: t(lang, 'tutorial.done'),
+    onDoneClick : () => {
+      // ended
+      const endTime = Date.now();
+      const startTime = null;
+      const elapsedTime = endTime && startTime ? endTime - startTime : null;
+      if ((elapsedTime && elapsedTime > 4000) || driverObj.isLastStep()) {
+        window.localStorage.setItem('driverStarted', String(Number(window.localStorage.getItem('driverStarted') || 0) + 1));
       }
+      
+      driverObj.destroy();
+    },
+    onDestroyed: () => { // when ended/canceled
+      document.querySelector("#cursor-icon-tutorial")?.classList.add("hidden");
+      document.querySelector("#tutorial-overlay")?.classList.add("hidden");
     },
     onNextClick: (element,step) => {
       // console.log(element,step);
@@ -261,16 +283,19 @@ function startDriver() {
       driverObj.moveNext();
     },
     steps: [
-      { element: '#driverjs-tutorial', popover: { title: 'Explora', description: 'Clickea en el titulo o el objeto de fondo para explorar cada sección.' },advanceOnClick: true, },
-      { element: '#tutorial-overlay', popover: { title: 'Desliza', description: 'Mueve la camara para navegar por las secciones.' },advanceOnClick: true, },
-      
+      { element: '#driverjs-tutorial', popover: { title: t(lang,'tutorial.title1'), description: t(lang,'tutorial.body1') },advanceOnClick: true, },
+      { element: '#tutorial-overlay', popover: { title: t(lang,'tutorial.title2'), description: t(lang,'tutorial.body2') },advanceOnClick: true, },
     ]
   });
 
+  startTime = Date.now();
   driverObj.drive();
 }
 
 function SpaceIntroAnimation3D(landingScene: LandingScene) {
+  // reveal skip text (it's inside the tutorial overlay)
+  document.querySelector("#skip-tutorial")?.classList.remove("hidden");
+  
   if (!landingScene) {
     return;
   }
@@ -287,11 +312,13 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
     onComplete: () => {
       isSpaceIntroPlaying = false;
       landingScene.showTitles();
-      startDriver();
+      startDriver(getLangFromUrl(new URL(window.location.href)));
       
       startTutorialIfNeeded(landingScene.overlay);
       document.removeEventListener('click', skipAnimation);
       window.scrollTo(0, scrollerPos);
+      
+      document.querySelector("#skip-tutorial")?.classList.add("hidden");
       
     },
   });

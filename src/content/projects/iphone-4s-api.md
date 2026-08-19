@@ -13,7 +13,7 @@ technologies:
     - Python
     - SQLite
     - HTML
-video: https://res.cloudinary.com/ddt7qdant/video/upload/v1757945629/iphone_ap%C3%AD_tixjj8.mp4
+video: YVd1oLhESGk
 links:
   - label:
       es: Repositorio

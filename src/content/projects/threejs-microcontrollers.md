@@ -13,7 +13,7 @@ technologies:
     - Three.js
     - Typescript
     - CSS
-video: https://res.cloudinary.com/ddt7qdant/video/upload/v1757945623/microcontrollers_b2ubyl.mp4
+video: 29G_P1ltiNg
 links:
   - label:
       es: Repositorio

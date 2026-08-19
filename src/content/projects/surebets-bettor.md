@@ -23,7 +23,7 @@ technologies:
     - pywebview
     - Recharts
     - React Router DOM
-video: https://res.cloudinary.com/ddt7qdant/video/upload/v1757945609/surebetsBettorVideo_reducido_z1ba0f_tsvcsh.mp4
+video: yeJEI4D8DE4
 links:
   - label:
       es: Repositorio

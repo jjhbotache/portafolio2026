@@ -25,7 +25,7 @@ technologies:
     - FastAPI
     - Cloudinary
     - Postgres SQL
-video: https://res.cloudinary.com/ddt7qdant/video/upload/v1757945615/memorable_complete_video_elyftt_sbjeta.mp4
+video: PXNpGJu-eMs
 links:
   - label:
       es: Repositorio (Frontend)

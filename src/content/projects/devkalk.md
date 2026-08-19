@@ -21,7 +21,7 @@ technologies:
     - React Toastify
     - Lucide React
     - Vite
-video: https://res.cloudinary.com/db8fpml9m/video/upload/v1738808731/devkalk_1_nb2hhl.mp4
+video: -mC65N9DWi8
 links:
   - label:
       es: Repositorio

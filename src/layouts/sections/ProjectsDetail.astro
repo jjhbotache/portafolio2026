@@ -56,7 +56,7 @@ const projects = await getCollection('projects');
           class="project-card group font-pixeloid text-white bg-gray-900 p-6
           absolute
           w-full h-full inset-0
-          md:inset-y-0 md:left-20 md:h-[90%] md:w-[60vw] md:max-w-3xl
+          md:inset-y-0 md:left-20 md:h-[90%] md:w-[70vw] 2xl:max-w-3xl
           flex flex-col items-center justify-between overflow-hidden
           rounded-sm 
           "
@@ -66,17 +66,15 @@ const projects = await getCollection('projects');
           aria-label={proj.data.title[lang]}
           style={`z-index: ${i*2};
             border: inset white;
-            
             `}
         >
-          <div class="flex flex-col md:flex-row items-center justify-between text-left gap-6 md:gap-10 w-full h-11/12 relative bg-gray-900
+          <div class="flex flex-col md:flex-row items-center justify-between text-left gap-4 md:gap-10 w-full h-11/12 relative bg-gray-900
           transform duration-300 transition-all">
             {/* text */}
-            <div class="flex flex-col justify-between  md:justify-center md:w-2/5 gap-3 basis-full z-10 bg-gray-900/50 overflow-y-hidden h-full
+            <div class="flex flex-col justify-between  md:justify-center md:w-2/5 gap-3 basis-full  bg-gray-900/50 overflow-y-hidden h-full
             group-[.is-expanded]:overflow-y-auto tiny-scrollbar
             "
-              data-vt="info"
-              style={`view-transition-name: card-info-${proj.id};`}>
+              data-vt="info">
 
               <h3 class="text-3xl font-bold leading-tight">{proj.data.title[lang]}</h3>
               <!-- add space between paragraphs -->
@@ -117,50 +115,82 @@ const projects = await getCollection('projects');
             </div>
 
             {/* media */}
-            <div class="flex flex-col w-full md:basis-full gap-0 md:gap-6 overflow-hidden rounded-lg shrink-0 md:shrink h-auto"
+            <div class="flex flex-col w-full md:h-full justify-evenly md:basis-full overflow-hidden rounded-lg shrink-0 md:shrink gap-2 "
               data-vt="media" >
-              <div class="relative aspect-video w-full rounded-lg overflow-hidden bg-black/50 z-10">
-                <video
-                  src={proj.data.video}
+              <div class="relative aspect-video w-full rounded-lg overflow-hidden bg-black/50 ">
+                {/* <video
+                  src="blob:https://www.youtube.com/e4324611-4a35-4c92-a826-675093626573"
                   class="w-full h-full object-cover absolute inset-0 transition-opacity duration-300
                   group-[.is-expanded]:opacity-100
                   "
-                  style={`view-transition-name: card-media-${proj.id};`}
+                  style={`view-transition-name: card-media-video-${proj.id};`}
                   muted
                   playsinline
                   loop
                   preload="none"
                   data-lazy-video
                   controls
-                />
+                  controlslist="nodownload noremoteplayback nofullscreen"
+                /> */}
                 <img
                   data-src={proj.data.img}
                   alt={t(lang, 'projects.card.coverAlt', { title: proj.data.title[lang] })}
                   class="absolute inset-0 w-full h-full object-cover transition-opacity duration-300
                   group-[.is-expanded]:opacity-0  group-[.is-expanded]:hidden"
-                  style={`view-transition-name: card-media-${proj.id};`}
 
                   loading="lazy"
                   decoding="async"
                   fetchpriority="low"
                   data-lazy-img
                 />
-                <div class="absolute top-1 right-1 bg-black/60 text-white/80 text-[10px] px-1.5 py-0.5 rounded opacity-0 transition-opacity duration-300
-                group-[.is-expanded]:opacity-100">
-                  VIDEO
+                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/60 text-white/80 text-[10px] px-1.5 py-0.5 rounded opacity-0 transition-opacity duration-300
+                group-[.is-expanded]:opacity-100 group-[.is-expanded]:animate-pulse hidden group-[.is-expanded]:block">
+                  VIDEO LOADING...
                 </div>
-              </div>
-
-              <div class="basis-auto md:basis-full relative h-16 hidden opacity-0 transition-opacity duration-300  group-[.is-expanded]:block group-[.is-expanded]:opacity-100
-              " >
-                <div class="flex flex-nowrap md:flex-wrap h-full items-center justify-start gap-1.5 overflow-x-auto overflow-y-hidden md:tiny-scrollbar">
+                <iframe
+                  src={`https://www.youtube.com/embed/${proj.data.video}?modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&fs=1&controls=0&cc_lang_pref=${lang}&loop=1&autoplay=1`}
+                  class="h-full object-cover absolute inset-0 transition-opacity duration-300
+                  group-[.is-expanded]:opacity-100 group-[.is-expanded]:block opacity-0 hidden 
+                  "
+                  style="width: 400%; margin-left: -150%; font-size: 0px; "
+                  loading="lazy"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                />
+              
+                <div class="hidden opacity-0 group-[.is-expanded]:flex group-[.is-expanded]:opacity-100  flex-nowrap h-auto items-center justify-center gap-1.5 pb-1 absolute bottom-0 left-0 scrolled_left"
+                style={`
+                animation-duration: ${proj.data.technologies[lang].length * 6}s;`}>
                   {proj.data.technologies[lang].map((tech) => (
-                    <span class="text-[.8em] px-2 py-0.5 rounded-full bg-secondary/15 text-secondary border border-secondary/30 whitespace-nowrap shrink-0" >
+                    <span class="text-[.6em] px-2 py-0.5 rounded-full bg-sky-950/80 text-secondary border border-secondary/30 whitespace-nowrap shrink-0" >
                       {tech}
                     </span>
                   ))}
                 </div>
+                
               </div>
+
+              
+              
+              {/* links */}
+              <div class="hidden group-[.is-expanded]:flex flex-wrap gap-1.5 justify-center md:justify-end  w-full">
+                {proj.data.links.map((link) => (
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex justify-between p-[0.3em] pl-1  rounded-full bg-secondary/20 text-secondary text-[0.625em] font-bold hover:bg-secondary/40 transition-colors duration-300 gap-1"
+                  >
+                    {link.label[lang]}
+                    <img src={
+                      link.url.includes("github")
+                        ? "/SVG/github.svg"
+                        : "/SVG/www.svg" 
+                    } alt={link.label[lang]} class="w-4 h-4 brightness-0 invert" />
+                  </a>
+                ))}
+              </div>
+              
 
             </div>
 
@@ -174,7 +204,7 @@ const projects = await getCollection('projects');
 
           {/* expand button */}
           <div
-          onclick={`document.startViewTransition(()=>document.getElementById('project-${proj.id}').classList.toggle('is-expanded'))`}
+          onclick={`document.getElementById('project-${proj.id}').classList.toggle('is-expanded')`}
           class="w-full h-1/12 flex justify-center items-center group-hover:opacity-50 transition-opacity duration-300 text-xs text-white/60 cursor-pointer
           hover:opacity-100 hover:text-white/80 " >
             <span class="block group-[.is-expanded]:hidden">click for more!</span>
@@ -198,10 +228,57 @@ const projects = await getCollection('projects');
        reach `scrollDistance` of scroll, so scrub never hits progress = 1. -->
   <div id="projectsSpacer"></div>
   <!-- 3D model anchor and close button shared by every detail section. -->
-  <ModelBgAnchor />
+  <ModelBgAnchor mobileStyle=" transform -translate-x-1/2 top-2/12" />
   <DetailCloseButton lang={lang} />
 </div>
 </div>
+
+<style>
+  /* Hide YouTube edge-anchored chrome by widening the iframe and pushing it
+   left. The video stays centered in the viewport; title/logo/share UI fall
+   outside the clipped stage. The center pause button is the only remaining
+   artifact (trade-off documented). */
+.yt-host iframe {
+  width: 400% !important;
+  height: 100% !important;
+  margin-left: -200% !important;
+  border: 0 !important;
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+}
+.yt-host iframe .ytmVideoInfoVideoTitle{
+  display: none !important;
+}
+
+.scrolled_left {
+  will-change: transform;
+  animation: toLeft ease-in-out  infinite;
+}
+
+.scrolled_left:hover {
+  /* pause animation */
+  animation-play-state: paused;
+}
+@media (min-width: 768px) {
+  
+  @keyframes toLeft {
+    from { transform: translateX(38vw); }
+    to { transform: translateX(-100%); }
+  }
+}
+
+@media (max-width: 768px) {
+  
+  @keyframes toLeft {
+    from { transform: translateX(100vw); }
+    to { transform: translateX(-100%); }
+  }
+}
+
+
+
+</style>
 
 
 <script>
@@ -238,23 +315,24 @@ const projects = await getCollection('projects');
     //   - card[i] slides in from a direction: right -> left -> bottom -> top (repeats)
     // Result: each card stays partially visible on the left as a stack,
     // with the newest card always on top.
-    const slideDirections = [
-      { x: '200%', y: 0 },   // right
-      { x: '-200%', y: 0 },  // left
-      { x: 0, y: '200%' }   // bottom
-    ];
+    // const slideDirections = [
+    //   { x: '200%', y: 0 },   // right
+    //   { x: '-200%', y: 0 },  // left
+    //   { x: 0, y: '200%' }   // bottom
+    // ];
     
     // animates each card into view and shifts the previous cards left
     cards.forEach((card, i) => {
       if (i === 0) return; // first card is already in place
-      const dir = slideDirections[(i - 1) % slideDirections.length];
+      
       timeline
       .addLabel(`card-${i}`)
       .fromTo(
         card,
-        { x: dir.x, y: dir.y, },
+        { x: 0, y: "111%", },
         { x: '0%', y: '0%',  duration: 1 },
-        i
+        // if its the second card, make it start immediately
+        i===1 ? 0 : i
       )
       
     });

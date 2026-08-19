@@ -13,7 +13,7 @@ technologies:
     - HTML
     - CSS
     - BEM methodology
-video: https://res.cloudinary.com/ddt7qdant/video/upload/v1757945609/disneyCloneVideo_reducido_zplh4m_iacub1.mp4
+video: ZegcFrBBkiA
 links:
   - label:
       es: Repositorio

@@ -57,7 +57,7 @@ const projects = defineCollection({
         en: z.array(z.string()),
         es: z.array(z.string()),
       }),
-      video: z.url(),
+      video: z.string(),
       links: z.array(
         z.object({
           label: bilingualString,

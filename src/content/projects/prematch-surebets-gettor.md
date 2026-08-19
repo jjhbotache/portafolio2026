@@ -13,7 +13,7 @@ technologies:
     - Python
     - Beautiful Soup
     - pyTelegramBotAPI
-video: https://res.cloudinary.com/ddt7qdant/video/upload/v1757945609/simplescreenrecorder-2024-08-14_11.26.20-ezgif.com-video-to-gif-converter_iugz1t_aql62q.mp4
+video: RKelr5FM_10
 links:
   - label:
       es: Repositorio

@@ -236,7 +236,7 @@ const startRenderLoop = (
   };
 };
 
-const createGradientBackground = () => {
+const createGradientBackground = (): THREE.Texture | null => {
   const size = 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;

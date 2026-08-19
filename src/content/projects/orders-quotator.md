@@ -17,7 +17,7 @@ technologies:
     - Typescript
     - Expo
     - SQLite
-video: https://res.cloudinary.com/ddt7qdant/video/upload/v1757945615/orders_quotator_nzchqa.mp4
+video: UMnJQJ2MBLQ
 links:
   - label:
       es: Repositorio

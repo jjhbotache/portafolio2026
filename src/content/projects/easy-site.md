@@ -13,7 +13,7 @@ technologies:
     - Django
     - Tailwind CSS
     - Postgres SQL
-video: https://res.cloudinary.com/ddt7qdant/video/upload/v1757945619/easySiteVideo_vcm8uh_wvvlpd.mp4
+video: UX3EfPsHSEc
 links:
   - label:
       es: Repositorio

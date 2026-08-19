@@ -21,7 +21,7 @@ technologies:
     - Styled Components
     - React Router DOM
     - AWS Cognito
-video: https://res.cloudinary.com/ddt7qdant/video/upload/v1757945621/netflixCloneVideo_gkycka_b6wrbm.mp4
+video: Eex7RBVdqfc
 links:
   - label:
       es: Repositorio

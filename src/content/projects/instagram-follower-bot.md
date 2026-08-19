@@ -15,7 +15,7 @@ technologies:
     - Python
     - Selenium
     - Google gemini
-video: https://res.cloudinary.com/ddt7qdant/video/upload/v1757945612/memorable_instabot_flowchar_n7tiqo_yacu70.mp4
+video: MdbcrJJWa5g
 links:
   - label:
       es: Repositorio

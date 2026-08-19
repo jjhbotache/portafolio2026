@@ -1,6 +1,13 @@
 {
   "es": {
     "hero-subtitle": "Curioso por naturaleza, creador por elección.",
+    "tutorial.next": "Siguiente",
+    "tutorial.prev": "Anterior",
+    "tutorial.done": "¡Entendido!",
+    "tutorial.title1": "Explora",
+    "tutorial.title2": "Desliza",
+    "tutorial.body1": "Clickea en el titulo o el objeto de fondo para explorar cada sección.",
+    "tutorial.body2": "Mueve la camara para navegar por las secciones.",
     "nav.lang.toggle": "Cambiar a inglés",
     "nav.lang.shortLabel": "EN",
     "nav.lang.fullLabel": "English",
@@ -31,6 +38,13 @@
   },
   "en": {
     "hero-subtitle": "Curious by nature, creator by choice.",
+    "tutorial.next": "Next",
+    "tutorial.prev": "Previous",
+    "tutorial.done": "Got it!",
+    "tutorial.title1": "Explore",
+    "tutorial.title2": "Slide",
+    "tutorial.body1": "Click on the title or the background object to explore each section.",
+    "tutorial.body2": "Move the camera to navigate through the sections.",
     "nav.lang.toggle": "Switch to Spanish",
     "nav.lang.shortLabel": "ES",
     "nav.lang.fullLabel": "Español",

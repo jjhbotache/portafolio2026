@@ -13,7 +13,7 @@ technologies:
     - React native
     - Javascript
     - SQLite
-video: https://res.cloudinary.com/ddt7qdant/video/upload/v1757945608/reactTodoApp_asmrrg_martgh.mp4
+video: 8hSSi7OAFfc
 links:
   - label:
       es: Descargar

@@ -17,8 +17,10 @@ const { lang, sectionId, storageKey, maxShowTimes = 3 } = Astro.props as Props;
 
 <div
   id={`${sectionId}ScrollTutorial`}
-  class="scroll-tutorial absolute bottom-1 right-[50%] transform translate-x-1/2 
-   md:right-50 md:bottom-50  md:translate-x-0
+  class="scroll-tutorial absolute bottom-1 left-1/2 -translate-x-1/2 transform  
+  
+    md:bottom-auto md:top-1/2  md:-translate-y-1/2 md:left-auto md:right-5
+   
    z-20 flex md:flex-col items-center gap-1 pointer-events-none transition-opacity duration-500 opacity-0"
   aria-hidden="true"
   data-tutorial-storage-key={storageKey}

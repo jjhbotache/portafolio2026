@@ -311,6 +311,7 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
         );
       }
 
+      timeline.addLabel(`card-${k}`, segmentTime);
       timeline.fromTo(
         cards[k],
         { x: '200%' },
@@ -318,7 +319,6 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
         segmentTime,
       );
 
-      timeline.addLabel(`card-${k}`, segmentTime);
     }
 
     // One viewport of scroll per card transition.
@@ -329,7 +329,7 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
       trigger: content,
       start: 'top top',
       end: () => `+=${getScrollDistance()}`,
-      scrub: 0.2,
+      scrub: 0.1,
       // Snap the timeline to each card label when the user stops scrolling
       // so the view never rests halfway between two projects.
       snap: {

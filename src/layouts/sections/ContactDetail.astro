@@ -22,7 +22,7 @@ const { lang } = Astro.props as Props;
 // Contact info rendered in the centre of the section. The email opens the
 // user's mail client via `mailto:`; the phone opens WhatsApp with a
 // pre-filled message so the first conversation already has context.
-const CONTACT_EMAIL = 'juanjosehuetas.dev@gmail.com';
+const CONTACT_EMAIL = 'juanjosehuertas.dev@gmail.com';
 const CONTACT_PHONE_DISPLAY = '+57 3241066569';
 const CONTACT_PHONE_HREF =
   'https://wa.me/3241066569?text=Hola%20Juan%20Jose,%20vi%20tu%20portafolio%20y%20me%20gustar%C3%ADa%20contactarte!';
@@ -32,7 +32,7 @@ const CONTACT_PHONE_HREF =
 const contactIcons = [
   { icon: 'github',   label: 'GitHub',   href: 'https://github.com/jjhbotache' },
   { icon: 'gmail',    label: 'Email',    href: `mailto:${CONTACT_EMAIL}` },
-  { icon: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/in/juan-jose-huertas-botache/' },
+  { icon: 'linkedin', label: 'LinkedIn', href: lang === 'en' ? 'https://www.linkedin.com/in/juan-jose-huertas-botache?locale=en-US' : 'https://www.linkedin.com/in/juan-jose-huertas-botache' },
   { icon: 'telegram', label: 'Telegram', href: 'https://t.me/jjhbotache' },
   { icon: 'whatsapp', label: 'WhatsApp', href: CONTACT_PHONE_HREF },
 ] as const;
@@ -71,7 +71,7 @@ const duplicatedIcons = [...contactIcons, ...contactIcons];
 
     <a
       href={`mailto:${CONTACT_EMAIL}`}
-      class="font-pixeloid uppercase tracking-widest text-xl md:text-4xl 2xl:text-5xl text-white/95 hover:text-white  underline md:decoration-none md:border-b-2 border-white/30 hover:border-white/80  decoration-white/30 hover:decoration-white/80 transition-colors break-all flex flex-col gap-1.5 md:flex-row md:items-end md:gap-0"
+      class="font-pixeloid uppercase tracking-widest text-xl md:text-4xl 2xl:text-5xl text-white/95 hover:text-white  underline md:no-underline md:border-b-2 border-white/30 hover:border-white/80  decoration-white/30 hover:decoration-white/80 transition-colors break-all flex flex-col gap-1.5 md:flex-row md:items-end md:gap-0"
       target="_blank"
     >
       {CONTACT_EMAIL.split('@')[0]}<span class="text-sm text-white/50 ">@{CONTACT_EMAIL.split('@')[1]}</span>
@@ -90,7 +90,8 @@ const duplicatedIcons = [...contactIcons, ...contactIcons];
     </p>
     <!-- Row 3: infinite icon marquee. Animation is identical to the tech
          marquees in AboutMeDetail.astro. -->
-    <section class="fixed bottom-0 left-0 md:left-32 w-full md:w-50% overflow-hidden  transform md:translate-x-[0%] -translate-y-[120%] md:-translate-y-[30%] 2xl:-translate-y-[25%]  md:-rotate-24 ">
+    <section class="fixed bottom-0 left-0 md:left-32 w-full md:w-50% overflow-hidden  transform 
+    md:translate-x-[0%] -translate-y-[9%]  2xl:-translate-y-[25%]  md:-rotate-35 ">
       <div class="tech-marquee-row w-full transform md:translate-x-[10%]">
         <div class="tech-marquee-mask">
           <div

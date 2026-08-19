@@ -25,7 +25,7 @@ technologies:
     - React Router DOM
     - WebSockets
     - Vite
-video: https://res.cloudinary.com/ddt7qdant/video/upload/v1757945612/chattus_iv1lbg_dgzz3h.mp4
+video: 8x6rFx5Cgls
 links:
   - label:
       es: Repositorio (Frontend)
