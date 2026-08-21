@@ -44,6 +44,7 @@ export const createProjectsBackground = (): TitleBackgroundController => {
   return {
     modelPaths: MODEL_PATH,
     onLoad: ({ sourceModels,sourceAnimations, backdropGroup, titleSize }) => {
+      backdropGroup.name = 'projectsBackground';
       if (!sourceModels || sourceModels.length === 0) return [];
       
       

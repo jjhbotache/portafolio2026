@@ -23,6 +23,8 @@ export const createExperienceBackground = (): TitleBackgroundController => {
   return {
     modelPaths: EXPERIENCE_MODEL_PATHS,
     onLoad: ({ sourceModels, backdropGroup, titleSize }) => {
+      backdropGroup.name = 'experienceBackground';
+      
       const sourceModel = sourceModels[0];
       if (!sourceModel) {
         return [];

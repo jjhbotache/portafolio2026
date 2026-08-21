@@ -52,21 +52,21 @@ const duplicatedRows = technologyCategories.map((category) => ({
      `backgroundSize` on `#expanded-section-body`; if it stayed on the outer
      section the tween would mutate a no-op property. -->
 <section class="col-start-1 row-start-2 col-span-3 font-pixeloid">
-  <div id="expanded-section-body" class="h-full w-full flex justify-center items-center text-white bg-linear-to-r from-black/20 via-black/50 to-black/20 bg-size-[0%_100%] bg-center bg-no-repeat backdrop-blur-3xl">
+  <div id="expanded-section-body" class="h-full w-full flex justify-center items-center text-white bg-linear-to-r from-black/20 via-black/50 to-black/20 bg-center bg-no-repeat backdrop-blur-3xl">
     <div class="max-w-md h-full flex flex-col items-center justify-evenly xl:justify-stretch py-3 text-center gap-4 px-4 md:px-0">
-      <p class="text-center text-sm xl:basis-full flex items-start justify-center" id="aboutMeBodyText" data-source-text={t(lang, 'sections.aboutMe.body')} /> 
-      <a href="/cv.pdf" target="_blank" rel="noopener noreferrer" class="flex opacity-0 gap-2 hover:underline group"  >
+      <p class="text-center text-sm xl:basis-full flex items-start justify-center" id="aboutMeBodyText" data-source-text={t(lang, 'sections.aboutMe.body')} />
+      <a href="/cv.pdf" target="_blank" rel="noopener noreferrer" class="cv-download flex gap-2 hover:underline group"  >
         <span
           class="cv-download-label text-sm md:text-base font-semibold uppercase tracking-widest"
           data-lang={lang}
           data-i18n-text={`sections.aboutMe.cvDownload`}
         >{t(lang, 'sections.aboutMe.cvDownload')}</span>
-        <Icon 
-          name="download" 
-          class="w-6 h-6 text-white fill-white group-hover:scale-90 transition-transform duration-100" 
+        <Icon
+          name="download"
+          class="w-6 h-6 text-white fill-white group-hover:scale-90 transition-transform duration-100"
         />
       </a>
-    </div> 
+    </div>
   </div>
 </section>
 
@@ -129,6 +129,54 @@ const duplicatedRows = technologyCategories.map((category) => ({
     }
     50.01%, 100% {
       opacity: 0;
+    }
+  }
+
+  /* Background gradient reveal used by the AboutMe section. Replaces the
+     GSAP `backgroundSize: 0% 100% → 200% 100%` tween with a pure CSS
+     animation. `@property` registers the custom property so the value
+     interpolates smoothly across keyframes; without it the browser would
+     just snap between the start and end values. JS only toggles the
+     `.is-revealing` class to retrigger the animation on every open. */
+  @property --aboutme-bg-size {
+    syntax: '<percentage>';
+    initial-value: 0%;
+    inherits: false;
+  }
+
+  @keyframes aboutme-bg-reveal {
+    from { --aboutme-bg-size: 0%; }
+    to   { --aboutme-bg-size: 200%; }
+  }
+
+  #expanded-section-body {
+    background-size: var(--aboutme-bg-size) 100%;
+  }
+
+  #expanded-section-body.is-revealing {
+    animation: aboutme-bg-reveal 2s ease-out both;
+  }
+
+  /* CV download button fade-in. Replaces the GSAP opacity tween with a
+     class swap; the transition lives on the element itself (already
+     there via the existing utility classes). */
+  #expanded-section-body a.cv-download {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+  }
+
+  #expanded-section-body a.cv-download.is-visible {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #expanded-section-body.is-revealing {
+      animation: none;
+      --aboutme-bg-size: 200%;
+    }
+    #expanded-section-body a.cv-download {
+      transition: none;
+      opacity: 1;
     }
   }
 
@@ -262,55 +310,54 @@ const duplicatedRows = technologyCategories.map((category) => ({
   import { gsap } from 'gsap';
   import {TextPlugin} from 'gsap/TextPlugin';
   import { playTitleIntroAnimation } from '../../lib/sectionTitleReveal';
-  
+
   const isMobile = window.innerWidth < 768;
-  
+
   gsap.registerPlugin(TextPlugin);
   const MIN_TYPING_DURATION_S = 1.5; // seconds
   const TYPING_SPEED_MS = 20; // milliseconds per character
 
-  // Reference to the open-timeline so `stopAboutMe` can kill it cleanly if
-  // the user closes the section mid-animation (otherwise the inline style
-  // would keep mutating after the detail view is hidden).
+  // Reference to the open-timeline so `stopAboutMe` can kill the typewriter
+  // cleanly if the user closes the section mid-animation. The background
+  // gradient reveal and CV-link fade are now pure CSS, so they only need
+  // a class swap to retrigger.
   let openTimeline: gsap.core.Timeline | null = null;
 
-  // Reveals the background gradient. Uses `fromTo` so every open replays
-  // the full 0% -> 200% sweep — without an explicit `from`, GSAP would
-  // tween from the current inline value (already 200% from the previous
-  // open) to 200%, which is a no-op on re-entry.
-  const expandSectionBody = (): gsap.core.Timeline => {
+  // Triggers the CSS background-gradient reveal + typewriter + CV fade.
+  // The two CSS animations are kicked off by toggling `.is-revealing` /
+  // `.is-visible`; the typewriter stays on GSAP because there is no CSS
+  // equivalent for per-character text reveal.
+  const expandSectionBody = (): void => {
     const sectionBodyText = document.querySelector<HTMLElement>('#aboutMeBodyText');
-    
+    const sectionBody = document.querySelector<HTMLElement>('#expanded-section-body');
+    const cvLink = document.querySelector<HTMLElement>('#expanded-section-body a.cv-download');
+
+    if (sectionBody) {
+      // Force a reflow so the keyframe restarts on every open even if
+      // the user closes and re-opens the section rapidly.
+      sectionBody.classList.remove('is-revealing');
+      void sectionBody.offsetWidth;
+      sectionBody.classList.add('is-revealing');
+    }
+
+    if (cvLink) {
+      cvLink.classList.remove('is-visible');
+      void cvLink.offsetWidth;
+      cvLink.classList.add('is-visible');
+    }
+
     if (openTimeline) {
       openTimeline.kill();
       openTimeline = null;
     }
     openTimeline = gsap.timeline();
-    openTimeline.fromTo(
-      '#expanded-section-body',
-      { backgroundSize: '0% 100%' },
-      {
-        backgroundSize: '200% 100%',
-        duration: 2,
-        ease: 'power2.out',
-      },
-    );
-    // typewriter effect
     openTimeline.to(sectionBodyText, {
       text: sectionBodyText?.dataset.sourceText || '',
       duration: Math.max(MIN_TYPING_DURATION_S, (sectionBodyText?.dataset.sourceText?.length || 0) * TYPING_SPEED_MS / 1000),
       ease: "none"
-    }, "<+=0.3");
-    
-    openTimeline.to('#expanded-section-body a', {
-      opacity: 1,
-      duration: 0.5,
-      ease: 'power1.inOut',
-    }, "<+=0.3");
-    
-    return openTimeline;
+    });
   };
-  
+
 
   // Driven by the scene orchestrator every time the user opens the
   // About Me section (see `getSectionHooks` in lib/homeLandingScene.ts).
@@ -325,16 +372,19 @@ const duplicatedRows = technologyCategories.map((category) => ({
   };
 
   // Driven by the orchestrator when the user closes the section. Kills any
-  // running tweens and resets the background state so the next open
-  // animates from 0% again.
+  // running typewriter tween and resets the CSS classes so the next open
+  // animates from 0% again. Removing `.is-visible` lets the CSS
+  // `transition: opacity 0.5s` on `.cv-download` fade it back out on its
+  // own — no extra JS plumbing needed.
   const stopAboutMe = (): void => {
     if (openTimeline) {
       openTimeline.kill();
       openTimeline = null;
     }
-    gsap.set('#expanded-section-body', { backgroundSize: '0% 100%' });
-    gsap.set('#aboutMeBodyText', { text: '', clearProps: 'all' });
-    gsap.set('#expanded-section-body a', { opacity: 0 });
+    document.querySelector<HTMLElement>('#expanded-section-body')?.classList.remove('is-revealing');
+    document.querySelector<HTMLElement>('#expanded-section-body a.cv-download')?.classList.remove('is-visible');
+    const bodyText = document.querySelector<HTMLElement>('#aboutMeBodyText');
+    if (bodyText) bodyText.textContent = '';
   };
 
   // Expose hooks for the scene orchestrator. The orchestrator calls

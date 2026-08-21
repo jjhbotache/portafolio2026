@@ -1,0 +1,308 @@
+---
+import { getLangFromUrl, swapLocaleInPath, t } from '../i18n/utils';
+import MorphIcon from "morphicons/astro";
+import { Code, Globe, House, Menu, MessageCircle, Rocket, User, X } from "lucide";
+
+const currentLang = getLangFromUrl(Astro.url);
+const otherLang = currentLang === 'en' ? 'es' : 'en';
+const langHref = swapLocaleInPath(Astro.url.pathname, otherLang);
+
+// Order matches the section disk in `homeLandingTitles.ts` so the icons
+// land on the same slots the user will see when the camera swings to
+// that section. `index` is what `homeLandingScene.openSection` expects.
+const menuItems = [
+  {
+    id: 'menu-icon-experience',
+    sectionKey: 'experience',
+    index: 0,
+    label: t(currentLang, 'sections.experience.title'),
+    icon: Rocket,
+  },
+  {
+    id: 'menu-icon-projects',
+    sectionKey: 'projects',
+    index: 1,
+    label: t(currentLang, 'sections.projects.title'),
+    icon: Code,
+  },
+  {
+    id: 'menu-icon-contact',
+    sectionKey: 'contact',
+    index: 2,
+    label: t(currentLang, 'sections.contact.title'),
+    icon: MessageCircle,
+  },
+  {
+    id: 'menu-icon-aboutMe',
+    sectionKey: 'aboutMe',
+    index: 3,
+    label: t(currentLang, 'sections.aboutMe.title'),
+    icon: User,
+  },
+] as const;
+
+const langLabel = t(currentLang, 'nav.lang.fullLabel');
+const langShort = t(currentLang, 'nav.lang.shortLabel');
+const langToggleLabel = t(currentLang, 'nav.menu.toggle');
+---
+
+<!-- Collapsed trigger: a single liquid-glass button that morphs its
+     icon between Menu and X. The popup itself lives in `#menu-popup`
+     and is hidden until the button opens it. -->
+<button
+  id="menu-button"
+  type="button"
+  aria-label={langToggleLabel}
+  aria-expanded="false"
+  aria-controls="menu-popup"
+  class="menu-trigger fixed liquid-glass top-4 right-4 md:top-6 md:right-6 z-50 h-12 min-w-12 px-4 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white text-sm md:text-base font-semibold flex items-center justify-center gap-2 transition-colors hover:cursor-pointer"
+>
+  <MorphIcon icon={Menu} id="menu-icon-trigger" label={langToggleLabel} class="menu-trigger__icon" />
+</button>
+
+<!-- Popup: a 1/4 width panel (with a 150px floor so it never collapses
+     on narrow phones) listing the language toggle first, then the four
+     sections in the same order as the 3D disk. Each item carries its
+     own morph-icon so the intro / hover animation can drive them. -->
+<div
+  id="menu-popup"
+  role="menu"
+  aria-labelledby="menu-button"
+  class="menu-popup fixed top-4 right-4 md:top-6 md:right-6 z-45 mt-16 md:mt-20 min-w-37.5 w-1/4 max-w-[320px] rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white opacity-0 pointer-events-none translate-y-2 transition-all duration-200 "
+>
+  <ul class="menu-popup__list flex flex-col gap-1 p-2">
+    <li>
+      <a
+        id="menu-item-lang"
+        role="menuitem"
+        
+        class="menu-item flex items-center gap-3 w-full px-3 py-2 rounded-xl hover:bg-white/15 transition-colors"
+        onclick={` window.location.href = ${langHref}; `}
+      >
+        <MorphIcon icon={Globe} id="menu-icon-lang" label={langLabel} class="menu-item__icon shrink-0" />
+        <span class="menu-item__label flex-1 text-sm md:text-base">{langLabel}</span>
+        <span class="menu-item__code text-xs uppercase tracking-widest text-white/70">{langShort}</span>
+      </a>
+    </li>
+    {menuItems.map((item) => (
+      <li>
+        <button
+          id={`menu-item-${item.sectionKey}`}
+          type="button"
+          role="menuitem"
+          data-section-index={item.index}
+          class="menu-item flex items-center gap-3 w-full px-3 py-2 rounded-xl hover:bg-white/15 transition-colors text-left hover:cursor-pointer duration-300"
+        >
+          <MorphIcon icon={item.icon} id={item.id} label={item.label} class="menu-item__icon shrink-0" />
+          <span class="menu-item__label flex-1 text-sm md:text-base">{item.label}</span>
+        </button>
+      </li>
+    ))}
+    <li >
+      <button
+        id="menu-item-home"
+        type="button"
+        role="menuitem"
+        data-action="close-detail"
+        aria-label={t(currentLang, 'nav.menu.homeAria')}
+        data-i18n-attr={`aria-label:nav.menu.homeAria`}
+        class="menu-item menu-item--home flex items-center gap-3 w-full px-3 py-2 rounded-xl hover:bg-white/15 transition-colors text-left hover:cursor-pointer duration-300 border-t border-white/10 mt-1 pt-3"
+      >
+        <MorphIcon icon={House} id="menu-icon-home" label={t(currentLang, 'nav.menu.home')} class="menu-item__icon shrink-0" />
+        <span class="menu-item__label flex-1 text-sm md:text-base">{t(currentLang, 'nav.menu.home')}</span>
+      </button>
+    </li>
+  </ul>
+</div>
+ 
+
+<script>
+  import { Code, Globe, House, Menu, MessageCircle, Rocket, User, X, Circle } from "lucide";
+  import type { MorphIconElement } from "morphicons/element";
+  // import the menuItems from the Astro component so we can use them in the intro animation
+
+  // The <MorphIcon> Astro component registers the <morph-icon> custom
+  // element itself, so no defineMorphIcon() call is needed here.
+
+  const trigger = document.querySelector<HTMLButtonElement>('#menu-button');
+  const popup = document.querySelector<HTMLDivElement>('#menu-popup');
+  const triggerIcon = document.querySelector<MorphIconElement>('#menu-icon-trigger');
+  const langIcon = document.querySelector<MorphIconElement>('#menu-icon-lang');
+  const experienceIcon = document.querySelector<MorphIconElement>('#menu-icon-experience');
+  const aboutMeIcon = document.querySelector<MorphIconElement>('#menu-icon-aboutMe');
+  // Mobile-only quick escape button. Queried lazily so the missing
+  // element on desktop (where it's hidden via `md:hidden`) is a no-op.
+  const homeIcon = document.querySelector<MorphIconElement>('#menu-icon-home');
+  const contactIcon = document.querySelector<MorphIconElement>('#menu-icon-contact');
+  const projectsIcon = document.querySelector<MorphIconElement>('#menu-icon-projects');
+    
+  let expandedAnimationDone = false;
+
+  // Sequence the intro / hover animations iterate through. Each popup
+  // item starts as the `Menu` icon and morphs into its own glyph so the
+  // user sees a single shape sweep across the panel. The mobile-only
+  // home item rides at the end so its morph plays even on small viewports.
+  const sectionSequence = [
+    { id: 'menu-icon-lang', icon: Globe, el: langIcon },
+    { id: 'menu-icon-experience', icon: Rocket, el: experienceIcon },
+    { id: 'menu-icon-projects', icon: Code, el: projectsIcon },
+    { id: 'menu-icon-contact', icon: MessageCircle, el: contactIcon },
+    { id: 'menu-icon-aboutMe', icon: User, el: aboutMeIcon },
+    { id: 'menu-icon-home', icon: House, el: homeIcon },
+  ];
+
+  // The <MorphIcon> component renders the initial glyph at SSR time, so
+  // there is nothing to seed from JS. Runtime swaps still go through the
+  // element (property assignment animates, .set() is instant).
+
+  const setExpanded = (expanded: boolean) => {
+    if (!trigger || !popup || !triggerIcon) return;
+    trigger.setAttribute('aria-expanded', String(expanded));
+    // Assigning the `icon` property animates the morph (matches the
+    // morphicons/astro README example).
+    triggerIcon.icon = expanded ? X : Menu;
+    if (expanded) {
+      popup.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+      popup.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
+      // for every section button, animate them sequentially
+      // set them to circle first
+      if (expandedAnimationDone) return;
+      sectionSequence.forEach((sectionItem) => {
+        if (!sectionItem.el) return;
+        sectionItem.el.icon = Circle;
+      });
+      
+      setTimeout(() => {
+        sectionSequence.forEach((sectionItem, i) => {
+          const el = sectionItem.el;
+          if (!el) return;
+          setTimeout(() => {
+            el.icon = sectionItem.icon;
+          }, i * 100); //step through each section item with a 100ms delay
+        });
+        expandedAnimationDone = true;
+      }, 300); // delay the start of the sequence by 100ms so the user sees the circle first
+      
+      
+    } else {
+      popup.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+      popup.classList.remove('opacity-100', 'pointer-events-auto', 'translate-y-0');
+    }
+    
+  };
+  
+  // First-time intro: morph the icons in sequence the moment the host
+  // page tells us the space flythrough is done. The page dispatches
+  // `portfolio:menu-intro-ready` from the space-intro `onComplete`.
+  const timeBetweenSteps = 800; // ms
+  const runIntro = () => {
+    // get the menu-icon-trigger
+    if (!triggerIcon) return;
+    triggerIcon.icon = Menu;
+    
+    sectionSequence.forEach((sectionItem,i) => {
+      setTimeout(() => {
+        triggerIcon.icon = sectionItem.icon;
+      }, i * timeBetweenSteps);
+    });
+    
+    setTimeout(() => {
+      triggerIcon.icon = Menu;
+    }, sectionSequence.length * timeBetweenSteps);
+      
+  };
+
+  if (trigger) {
+    trigger.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const expanded = trigger.getAttribute('aria-expanded') === 'true';
+      setExpanded(!expanded);
+    });
+
+  }
+
+  // Click outside (or Escape) closes the popup.
+  document.addEventListener('click', (event) => {
+    if (!trigger || !popup) return;
+    if (trigger.getAttribute('aria-expanded') !== 'true') return;
+    const target = event.target as Node | null;
+    if (!target) return;
+    if (popup.contains(target) || trigger.contains(target)) return;
+    setExpanded(false);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && trigger?.getAttribute('aria-expanded') === 'true') {
+      setExpanded(false);
+    }
+  });
+
+  // Section buttons: ask the 3D scene to slide the camera and open the
+  // detail view. We do not navigate here — the scene owns the animation.
+  const sectionButtons = document.querySelectorAll<HTMLButtonElement>('[data-section-index]');
+  sectionButtons.forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const rawIndex = button.dataset.sectionIndex;
+      const sectionIndex = rawIndex ? Number(rawIndex) : NaN;
+      if (!Number.isFinite(sectionIndex)) return;
+      window.dispatchEvent(
+        new CustomEvent('portfolio:navigate-section', { detail: { sectionIndex } }),
+      );
+      setExpanded(false);
+    });
+  });
+
+  // Mobile-only "back to home" button: ask the scene to drop the detail
+  // overlay and reset the camera. The scene's listener is a no-op when
+  // the detail view is already closed, so it's safe to fire from the menu.
+  const homeButton = document.querySelector<HTMLButtonElement>('#menu-item-home');
+  if (homeButton) {
+    homeButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setExpanded(false);
+      // scroll everything to the top so the user sees the landing scene and not
+      // scroller correcto y robusto para iOS fullscreen
+      const scroller = document.scrollingElement || document.documentElement;
+      scroller.scrollTo({ top: 0, behavior: 'auto' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  
+
+  window.addEventListener('portfolio:menu-intro-ready', runIntro);
+  // If the page fires the event before the script wires up, replay on
+  // a microtask so we still catch the signal.
+  if ((window as unknown as { __menuIntroPending?: boolean }).__menuIntroPending) {
+    queueMicrotask(runIntro);
+  }
+</script>
+
+<style>
+  /* The morph-icon web component renders an inline <svg>. Pin its size
+     so the layout reads consistently with the Lucide glyphs the rest
+     of the project uses elsewhere. */
+     
+  ul{
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  morph-icon {
+    display: inline-flex;
+    width: 1.25rem;
+    height: 1.25rem;
+    color: currentColor;
+  }
+  @media (min-width: 768px) {
+    morph-icon {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+  .menu-item__icon {
+    color: white;
+  }
+</style>

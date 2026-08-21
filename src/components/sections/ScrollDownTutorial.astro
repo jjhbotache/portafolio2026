@@ -34,9 +34,17 @@ const { lang, sectionId, storageKey, maxShowTimes = 3 } = Astro.props as Props;
   </span>
 </div>
 
-<script>
-  import { gsap } from 'gsap';
+<!-- <style>
+  /* Visible state for the scroll-tutorial. The wrapper starts at opacity 0
+     via the Tailwind utility; adding `.is-visible` lets the
+     `transition-opacity duration-500` utility on the element drive the
+     fade-in. JS toggles this class for fade-in and fade-out. */
+  .scroll-tutorial.is-visible {
+    opacity: 1;
+  }
+</style> -->
 
+<script>
   // Global type declaration for the exposed tutorial initializer
   declare global {
     interface Window {
@@ -49,6 +57,14 @@ const { lang, sectionId, storageKey, maxShowTimes = 3 } = Astro.props as Props;
     storageKey: string;
     timelineProgress: () => number;
   }
+
+  // CSS-driven fade duration. Kept in sync with the `duration-500`
+  // utility class on the wrapper element (fade-in) and a 400 ms fade-out
+  // matching the original GSAP tween. The JS schedule relies on these
+  // durations to know when the opacity has finished before persisting
+  // the localStorage counter.
+  const FADE_IN_MS = 500;
+  const FADE_OUT_MS = 400;
 
   const initScrollTutorial = (config: ScrollTutorialConfig) => {
     const { sectionId, storageKey, timelineProgress } = config;
@@ -66,8 +82,10 @@ const { lang, sectionId, storageKey, maxShowTimes = 3 } = Astro.props as Props;
     // Skip if the user has already seen the tutorial enough times.
     if (!infinite && shownCount >= maxShowTimes) return;
 
-    // Show the tutorial with a fade-in
-    gsap.to(tutorial, { opacity: 1, duration: 0.5, delay: 0.3 });
+    // Show the tutorial with a CSS fade-in (utility `transition-opacity
+    // duration-500` on the wrapper handles the timing; we just swap a
+    // class so the start-state opacity:0 transitions to opacity:1).
+    window.setTimeout(() => tutorial.classList.add('opacity-100'), 300);
 
     // Poll the timeline progress each frame and hide when reaching the end.
     let hasHidden = false;
@@ -77,15 +95,14 @@ const { lang, sectionId, storageKey, maxShowTimes = 3 } = Astro.props as Props;
       const progress = timelineProgress();
       if (progress >= 0.99) {
         hasHidden = true;
-        // Fade out and bump the localStorage counter (skipped when infinite).
-        gsap.to(tutorial, {
-          opacity: 0,
-          duration: 0.4,
-          onComplete: () => {
-            if (infinite) return;
-            localStorage.setItem(storageKey, String(shownCount + 1));
-          },
-        });
+        // Fade out by removing the visible class; the matching CSS
+        // transition does the opacity tween. Then bump the localStorage
+        // counter (skipped when infinite) after the fade settles.
+        tutorial.classList.remove('opacity-100');
+        window.setTimeout(() => {
+          if (infinite) return;
+          localStorage.setItem(storageKey, String(shownCount + 1));
+        }, FADE_OUT_MS);
       } else {
         requestAnimationFrame(checkProgress);
       }

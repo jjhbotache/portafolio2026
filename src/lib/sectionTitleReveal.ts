@@ -1,11 +1,14 @@
-import { gsap } from 'gsap';
-
 // "Ink Bleed" reveal for the section detail titles (the h2 elements with
 // `tron-font` rendered at the top of each `#xxxDetailedView`). Plays once
 // every time the user opens a section so the title arrives from blur to
-// crisp regardless of which section is active. Respects
-// `prefers-reduced-motion` by clearing any inline styles and skipping the
-// animation entirely.
+// crisp regardless of which section is active.
+//
+// Implementation: pure CSS. The `@keyframes ink-bleed` rule lives in
+// `src/styles/global.css`; here we just toggle the `.ink-bleed` class and
+// force a reflow so the animation retriggers cleanly on every section
+// open. `prefers-reduced-motion` is honored by the matching media query
+// in `global.css` (the animation is skipped and the title renders in its
+// final state directly).
 
 type TitleTarget =
   | HTMLElement
@@ -14,26 +17,22 @@ type TitleTarget =
   | null
   | undefined;
 
+const triggerInkBleed = (el: HTMLElement): void => {
+  el.classList.remove('ink-bleed');
+  // Force reflow so removing+adding the class in the same tick still
+  // retriggers the CSS animation. Without this, the browser coalesces
+  // the style mutations and the keyframe never re-runs.
+  void el.offsetWidth;
+  el.classList.add('ink-bleed');
+};
+
 export const playTitleIntroAnimation = (target: TitleTarget): void => {
   if (!target) return;
 
-    const elements: HTMLElement[] = Array.from(
+  const elements: HTMLElement[] = Array.from(
     target instanceof HTMLElement ? [target] : Array.from(target),
   );
   if (elements.length === 0) return;
 
-    const tl = gsap.timeline();
-    tl.set(elements, { opacity: 0, textShadow: "none" })
-      .to(elements, { opacity: 1, duration: 0.1 })
-      .from(elements, {
-        clipPath: "inset(0 100% 0 0)",
-        duration: 1.2, ease: "power3.inOut"
-      })
-      .to(elements, { opacity: 0.2, duration: 0.05 })
-      .to(elements, { opacity: 1, duration: 0.1 })
-      .to(elements, { opacity: 0, duration: 0.05 })
-      .to(elements, { opacity: 0.2, duration: 0.1 })
-      .to(elements, { opacity: 1, duration: 0.3 })
-      .to(elements, { opacity: 0, duration: 0.05 })
-      .to(elements, { opacity: 1, textShadow: "0 0 8px #07eaff", duration: 1 });
+  elements.forEach(triggerInkBleed);
 };

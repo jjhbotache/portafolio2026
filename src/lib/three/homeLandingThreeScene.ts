@@ -9,6 +9,7 @@ import { createLandingTitles } from './homeLandingTitles';
 import { configureMaterialAnisotropy, disposeAllTextures } from './materialFactory';
 import type { SectionConfig } from '../sections';
 import type { Lang } from '../../i18n/utils';
+import gsap from 'gsap';
 
 const bloomResolutionScale = 1/8;
 const pixelRatio = .7;
@@ -45,6 +46,7 @@ export type LandingScene = {
   getActiveSection: () => SectionConfig | undefined;
   setPixelRatio: (ratio: number) => void;
   getPixelRatio: () => number;
+  navigateToSection: (index: number) => Promise<void>;
   dispose: () => void;
 };
 
@@ -342,6 +344,96 @@ export const createHomeLandingThreeScene = (
 
   const getPixelRatio = () => currentPixelRatio;
 
+
+  const MAX_YAW_DEG = 20;
+  const MIN_YAW_DEG = 5;
+  const GROWTH = 1.4;
+  const TICK_DURATION = 0.2;
+  const yawRadians = (deg: number) => (deg * Math.PI) / 180;
+
+  const nameList = ['experienceBackground','projectsBackground',  'contactBackground','aboutMeBackground',];
+  
+  const navigateToSection = (index: number): Promise<void> => {
+    const sectionToArrive = nameList[index];  
+    const arrivedToSection = () => (titles.getActiveTitleGroup().children[0].name === sectionToArrive);
+    console.log("going to",sectionToArrive);
+    
+    
+    return new Promise<void>((completeNavigation) => {
+      const anglePerTitle = titles.anglePerTitle;
+      const sectionCount = titles.sectionCount;
+      if (
+        typeof anglePerTitle !== 'number' ||
+        typeof sectionCount !== 'number' ||
+        typeof titles.getRelativeAngle !== 'function' ||
+        index < 0 ||
+        index >= sectionCount  ||
+        arrivedToSection()
+      ) {
+        completeNavigation();
+        return;
+      }
+
+      // Stop the idle auto-rotation so it doesn't fight the navigation.
+      pauseOrbit();
+
+      // The yaw direction is decided once up front and stays constant
+      // for the whole navigation: clockwise (negative yaw in our world
+      // space, since `getCameraClockwiseAngle` rises as the camera
+      // swings clockwise around the disk).
+      const clockwise = true;
+
+      let yawDeg = MIN_YAW_DEG;
+      let cancelled = false;
+
+      const setCameraYaw = (delta: number) => {
+        const diskCenter = titles.getTitlesWorldPosition();
+        const radius = camera.position.clone().sub(diskCenter);
+        const radiusLen = Math.hypot(radius.x, radius.z);
+        const yaw = -titles.getCameraClockwiseAngle();
+        const nextYaw = yaw + delta;
+        camera.position.set(
+          Math.sin(nextYaw) * radiusLen + diskCenter.x,
+          radius.y + diskCenter.y,
+          Math.cos(nextYaw) * radiusLen + diskCenter.z,
+        );
+      };
+
+      const tick = () => {
+        
+        if (cancelled) return;
+        const deltaYaw = yawRadians(yawDeg) * (clockwise ? 1 : -1);
+        gsap.to(
+          { t: 0 },
+          {
+            t: 1,
+            duration: TICK_DURATION,
+            ease: 'linear',
+            onUpdate: function tweenUpdate() {
+              const raw = this.targets()[0] as { t: number };
+              const eased = raw.t;
+              setCameraYaw(deltaYaw * eased);
+            },
+            onComplete: () => {
+              // console.log(titles.getActiveTitleGroup().children[0].name);
+              setCameraYaw(deltaYaw);
+              yawDeg = Math.min(yawDeg * GROWTH, MAX_YAW_DEG);
+              
+              if(!arrivedToSection()) {
+                tick();
+              } else {
+                setTimeout(completeNavigation, 200);
+                ;
+              }
+            },
+          },
+        );
+      };
+
+      tick()
+    });
+  };
+
   onResizeRef.current = setupResize(camera, renderer, composer, bloomPass, getPixelRatio);
 
   const { handleVisibilityChange, stopRenderLoop } = startRenderLoop(controls, composer, onResizeRef, (elapsedTime) => {
@@ -415,6 +507,7 @@ export const createHomeLandingThreeScene = (
     getActiveSection: titles.getActiveSection,
     setPixelRatio,
     getPixelRatio,
+    navigateToSection,
     dispose,
   };
 };

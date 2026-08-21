@@ -384,6 +384,16 @@ export const createLandingTitles = (
     hideAllTitles();
   };
 
+  // Force the active section without waiting for the camera to swing into
+  // its angular sector. Used by programmatic navigation (e.g. the menu
+  // popup), which animates the camera in parallel so the section label and
+  // detail view can update the moment the user clicks, instead of lagging
+  // until `updateFromCamera` next fires and snaps to the nearest index.
+  const setActiveIndex = (index: number) => {
+    if (index < 0 || index >= titles.length) return;
+    transitionTo(index);
+  };
+
   // Start hidden and reveal only when the GSAP intro sequence finishes.
   hide();
 
@@ -419,6 +429,27 @@ export const createLandingTitles = (
     getActiveBackdropGroup: () => titles[activeIndex]?.backdropGroup,
     getActiveSectionIndex: () => activeIndex,
     getActiveSection: (): SectionConfig | undefined => sections[activeIndex],
+    setActiveIndex,
+    // Exposed so external code (the menu navigation helper) can compute
+    // the camera delta angle to a target section. Returns the clockwise
+    // angle of the camera around the title disk center, in radians.
+    getCameraClockwiseAngle,
+    // Returns the current *relative* angle (clockwise angle of the
+    // camera around the disk minus the `referenceClockwiseAngle` that
+    // was captured when titles were shown). This is the same value the
+    // internal `updateFromCamera` uses to decide which section sits in
+    // front of the camera, so spinning the camera until this number
+    // crosses `index * ANGLE_PER_TITLE` is the only reliable way to
+    // land on a target section via the live detection loop.
+    getRelativeAngle: () => {
+      const clockwiseAngle = getCameraClockwiseAngle();
+      return normalizeAngle(clockwiseAngle - referenceClockwiseAngle);
+    },
+    // The world-space center of the title disk. Navigation animations rotate
+    // the camera around this point, so callers need to know where it is.
+    getTitlesWorldPosition: () => titlesRootWorldPosition.clone(),
+    anglePerTitle: ANGLE_PER_TITLE,
+    sectionCount: sections.length,
   };
 };
   

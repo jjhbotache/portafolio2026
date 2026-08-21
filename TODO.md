@@ -13,7 +13,7 @@
 - [✅]finish contact section
 - [✅]tutorial with driver js
 - [✅] Enhance site performance
-- [ ]adding support for mobile
+- [✅]adding support for mobile
   - [✅]adding support for mobile (experiences)
   - [✅]adding support for mobile (projects)
   - [✅]adding support for mobile (contact)
@@ -35,7 +35,7 @@
   - [✅]fix btn names languaje driver tutorial
   - [✅]posicion del tutorial de scroll arreglar
   <!-- - [ ]add loading for load img fonts and whatever it's needed -->
-  - [✅]contact double botom border in tableet
+  - [✅]contact double botom border in tablet
   - [✅]es/ing wrog languaje displayed
   - [✅]muy largo el scroll del principio
   - [✅]no siven links contacto
@@ -43,13 +43,11 @@
   - [✅]en projects, arreglar videos se muestra muy lento
   - [✅]en projects, arreglar que animacion se muestre de abajo a arriba siempre
   - [✅]en projects, arreglar videos que no corresponden
-  - [ ]transformar animaciones de proyectos a css puro, sin js:
+  - [✅]transformar animaciones de proyectos a css puro, sin js:
     - [✅]animacion de entrada del subtitulo
-  - [ ]va muy lento - primera vez
-  - [ ]dar soporte a safari browser
+  - [➖]va muy lento - primera vez
+  - [?]dar soporte a safari browser
   - [✅] arreglar linkedin
-  
-  
-  
-  
+  - [✅] poder volver en mobile a la primera pantalla de inicio
+- [✅]add fullscreen imgs
 

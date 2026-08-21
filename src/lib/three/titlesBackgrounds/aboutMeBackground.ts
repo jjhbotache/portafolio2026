@@ -29,6 +29,7 @@ export const createAboutMeBackground = (): TitleBackgroundController => {
   return {
     modelPaths: ABOUT_ME_MODEL_PATHS,
     onLoad: ({ sourceModels, backdropGroup, titleSize }) => {
+      backdropGroup.name = 'aboutMeBackground';
       const sourceModel = sourceModels[0];
       if (!sourceModel) return [];
       

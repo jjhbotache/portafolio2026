@@ -11,6 +11,7 @@ import { Icon } from 'astro-icon/components';
 import { Swiper, SwiperWrapper, SwiperSlide, SwiperPagination } from 'astro-swiper';
 import { resolveBilingual, t, type Lang } from '../../i18n/utils';
 import DetailCloseButton from '../../components/sections/DetailCloseButton.astro';
+import ImageLightbox from '../../components/sections/ImageLightbox.astro';
 import ModelBgAnchor from '../../components/sections/ModelBgAnchor.astro';
 import SectionTitle from '../../components/sections/SectionTitle.astro';
 import ScrollDownTutorial from '../../components/sections/ScrollDownTutorial.astro';
@@ -119,7 +120,7 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
             onclick={`event.stopPropagation(); this.classList.contains('is-expanded') && this.classList.remove('is-expanded'); `}
           >
             <div class="md:w-2/5 flex flex-col justify-center gap-3 overflow-y-auto pr-2">
-              <h3 class="text-xl mdtext-2xl font-bold leading-tight">{exp.title}</h3>
+              <h3 class="text-lg md:text-2xl font-bold leading-tight">{exp.title}</h3>
               <div class="flex flex-wrap items-center gap-3">
                 {exp.enterprises.map((ent) => (
                   <a
@@ -134,19 +135,20 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
                       class="w-6 h-6 rounded-sm "
                       loading="lazy"
                     />
-                    <span>{ent.name}</span>
+                    <span class="text-xs ">{ent.name}</span>
                   </a>
                 ))}
               </div>
               <div class="group text-xs md:text-sm">
-                <p class=" text-white/60 italic" data-period-display >{exp.period}</p>
-                <p class=" text-white/80 leading-relaxed">
+                <p class=" text-white/60 italic text-[0.5rem] " data-period-display >{exp.period}</p>
+                <p class=" text-white/80 leading-relaxed text-[0.65rem] ">
                   {exp.description}
                   <span class="underline bold transition-all duration-300
                   hover:opacity-80 hover:cursor-pointer"
                   onclick={`event.stopPropagation(); document.querySelector("#experienceCard-${exp.id}").classList.add('is-expanded')`}
                   >
-                    {t(lang, 'experience.viewMore')+". . ."}</span>
+                    {t(lang, 'experience.viewMore')+". . ."}
+                  </span>
                 </p>
                  <div class="experience-data-overlay 
                   translate-y-full absolute bottom-0 left-0 w-full p-4 bg-black/70 backdrop-blur-sm flex-col gap-2 opacity-0 z-10
@@ -191,12 +193,16 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
                   }}
                 >
                   <SwiperWrapper class="h-full">
-                    {exp.imgs.map((src) => (
+                    {exp.imgs.map((src, i) => (
                       <SwiperSlide class="aspect-video bg-linear-to-br from-black/40 via-bg-black/5 to-black/40">
                         <img
                           src={src}
                           alt={exp.title}
-                          class="w-full h-full object-contain object-center"
+                          data-lightbox-src={src}
+                          data-lightbox-name={`lightbox-${exp.id}-${i}`}
+                          data-lightbox-alt={exp.title}
+                          style={`view-transition-name: lightbox-${exp.id}-${i};`}
+                          class="w-full h-full object-contain object-center cursor-zoom-in"
                           loading="lazy"
                           decoding="async"
                         />
@@ -223,10 +229,16 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
     </div>
     <!-- add space to make it scrollable -->
     <div id="experienceSpacer"></div>
+
+    <!-- Fullscreen image lightbox. Sits inside the detail overlay so it
+        inherits the same lifecycle (mounted once, opened/closed by JS).
+        The `view-transition-name` is set per-image dynamically so each
+        thumbnail can FLIP into the enlarged image. -->
+    <ImageLightbox lang={lang} />
+    <DetailCloseButton lang={lang} />
   </div>
   <!-- 3D model anchor and close button shared by every detail section. -->
   <ModelBgAnchor mobileStyle='top-[35%] left-[37%]' />
-  <DetailCloseButton lang={lang} />
 </div>
 </div>
 <script>
@@ -399,6 +411,271 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
   // distance is computed with the section visible.
   let experienceHandle: ExperienceAnimationHandle | null = null;
 
+  // ---------------------------------------------------------------------------
+  // Lightbox control
+  // ---------------------------------------------------------------------------
+  // Click on any <img data-lightbox-src> inside the section opens a fullscreen
+  // overlay with a FLIP animation. Implementation notes:
+  //   - `view-transition-name` is shared between the thumbnail and the lightbox
+  //     clone, so the browser interpolates position/transform/size/opacity
+  //     between them. The thumbnail "gives" its name to the clone during
+  //     `startViewTransition()` and the clone clears it after the transition.
+  //   - Listeners are registered once per section lifecycle (not per open)
+  //     and tracked by an AbortController so they can be torn down instantly
+  //     when the section is closed or the page is swapped.
+  //   - The `astro:before-swap` listener kills the lightbox state silently so
+  //     a SPA navigation never leaves a stale overlay in the DOM.
+  //   - Falls back to direct DOM mutation when `document.startViewTransition`
+  //     is unavailable (Safari < 18).
+  type VTDocument = Document & {
+    startViewTransition?: (cb: () => void) => unknown;
+  };
+
+  const lightboxState = {
+    root: null as HTMLElement | null,
+    backdrop: null as HTMLElement | null,
+    stage: null as HTMLElement | null,
+    img: null as HTMLImageElement | null,
+    closeBtn: null as HTMLButtonElement | null,
+    aborter: null as AbortController | null,
+    activeThumb: null as HTMLImageElement | null,
+    activeName: null as string | null,
+  };
+
+  const findLightboxEl = (id: string): HTMLElement | null =>
+    document.querySelector<HTMLElement>(`#${id}`);
+
+  const setVTName = (el: HTMLElement | null, name: string | null): void => {
+    if (!el) return;
+    if (name) {
+      el.style.viewTransitionName = name;
+    } else {
+      el.style.removeProperty('view-transition-name');
+    }
+  };
+
+  // Preload an image so the FLIP destination has decoded pixels when the
+  // transition starts. Without this the browser can flash a blank clone.
+  const preloadImage = (src: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error(`lightbox preload failed: ${src}`));
+      img.src = src;
+    });
+
+  const openLightbox = async (thumb: HTMLImageElement, src: string, name: string, alt: string): Promise<void> => {
+    if (!lightboxState.root || !lightboxState.img) return;
+    if (lightboxState.root.classList.contains('is-open')) return;
+
+    lightboxState.activeThumb = thumb;
+    lightboxState.activeName = name;
+
+    // Mark the thumbnail so the global CSS rule can hide every other
+    // data-lightbox-src image (swiper loop clones included) during the
+    // transition. This prevents the sibling slides from leaking through
+    // while the FLIP animation is in flight.
+    thumb.dataset.lightboxActive = 'true';
+    document.body.dataset.lightboxActive = name;
+
+    try {
+      await preloadImage(src);
+    } catch {
+      // Swallow preload errors: the browser will still render the broken-
+      // image placeholder inside the lightbox, which is fine.
+    }
+
+    lightboxState.img.src = src;
+    lightboxState.img.alt = alt;
+    lightboxState.root.setAttribute('aria-hidden', 'false');
+
+    const doc = document as VTDocument;
+    const transition = doc.startViewTransition?.(() => {
+      // Hand the shared name over to the lightbox clone so the browser
+      // captures the thumbnail's old geometry in `::view-transition-old`
+      // and the lightbox's new geometry in `::view-transition-new`.
+      setVTName(thumb, null);
+      setVTName(lightboxState.img, name);
+      lightboxState.root?.classList.add('is-open');
+    });
+
+    if (transition && typeof (transition as { finished?: Promise<void> }).finished?.then === 'function') {
+      (transition as { finished: Promise<void> }).finished
+        .catch(() => undefined)
+        .finally(() => {
+          // Drop the clone's name after the transition so the next open
+          // doesn't reuse a stale snapshot.
+          if (lightboxState.activeName === name) {
+            setVTName(lightboxState.img, null);
+          }
+        });
+    } else {
+      setVTName(lightboxState.img, null);
+    }
+
+    lightboxState.closeBtn?.focus();
+  };
+
+  const closeLightbox = (): void => {
+    if (!lightboxState.root || !lightboxState.activeThumb || !lightboxState.activeName) return;
+    if (!lightboxState.root.classList.contains('is-open')) return;
+
+    const thumb = lightboxState.activeThumb;
+    const name = lightboxState.activeName;
+
+    const doc = document as VTDocument;
+    const transition = doc.startViewTransition?.(() => {
+      // Reverse the handover so the thumbnail becomes the named element
+      // again. The lightbox clone is still in the DOM at this point so the
+      // browser interpolates back to the thumbnail's geometry.
+      setVTName(lightboxState.img, name);
+      setVTName(thumb, name);
+      lightboxState.root?.classList.remove('is-open');
+    });
+
+    const finish = () => {
+      lightboxState.root?.setAttribute('aria-hidden', 'true');
+      if (lightboxState.img) {
+        lightboxState.img.src = '';
+        lightboxState.img.alt = '';
+      }
+      setVTName(lightboxState.img, null);
+      setVTName(thumb, name);
+      // Restore the visibility of the swiper siblings only after the FLIP
+      // back to the thumbnail has finished, so the user never sees them
+      // flicker between the close transition and the original layout.
+      thumb.removeAttribute('data-lightbox-active');
+      delete document.body.dataset.lightboxActive;
+      lightboxState.activeThumb = null;
+      lightboxState.activeName = null;
+    };
+
+    if (transition && typeof (transition as { finished?: Promise<void> }).finished?.then === 'function') {
+      (transition as { finished: Promise<void> }).finished
+        .catch(() => undefined)
+        .finally(finish);
+    } else {
+      finish();
+    }
+
+    thumb.focus();
+  };
+
+  // Instant teardown used by section close / SPA navigation. No animation.
+  const killLightbox = (): void => {
+    if (!lightboxState.root) return;
+    lightboxState.root.classList.remove('is-open');
+    lightboxState.root.setAttribute('aria-hidden', 'true');
+    if (lightboxState.img) {
+      lightboxState.img.src = '';
+      lightboxState.img.alt = '';
+    // Restore sibling visibility so the slider looks normal if the lightbox
+    // is killed mid-transition (e.g. SPA navigation, kernel stop).
+    lightboxState.activeThumb?.removeAttribute('data-lightbox-active');
+    delete document.body.dataset.lightboxActive;
+      setVTName(lightboxState.img, null);
+    }
+    if (lightboxState.activeThumb && lightboxState.activeName) {
+      setVTName(lightboxState.activeThumb, lightboxState.activeName);
+    }
+    lightboxState.activeThumb = null;
+    lightboxState.activeName = null;
+  };
+
+  // Listener setup is bound to the section lifecycle, not to each open, so
+  // we only attach once. `setupLightbox` is idempotent.
+  const setupLightbox = (): void => {
+    if (lightboxState.root) return;
+
+    lightboxState.root = findLightboxEl('image-lightbox');
+    lightboxState.backdrop = lightboxState.root;
+    lightboxState.stage = findLightboxEl('image-lightbox-stage');
+    lightboxState.img = lightboxState.root?.querySelector<HTMLImageElement>('#image-lightbox-img') ?? null;
+    lightboxState.closeBtn = lightboxState.root?.querySelector<HTMLButtonElement>('#image-lightbox-close') ?? null;
+    lightboxState.aborter = new AbortController();
+    const signal = lightboxState.aborter.signal;
+
+    // Delegated click: any <img data-lightbox-src> inside the experience
+    // section opens the lightbox. Handled at capture so it fires before
+    // swiper's own click logic.
+    document.addEventListener(
+      'click',
+      (e: MouseEvent) => {
+        const target = e.target as HTMLElement | null;
+        if (!target) return;
+        const thumb = target.closest<HTMLImageElement>('img[data-lightbox-src]');
+        if (!thumb) return;
+        if (e.defaultPrevented) return;
+        const src = thumb.dataset.lightboxSrc;
+        const name = thumb.dataset.lightboxName;
+        if (!src || !name) return;
+        e.preventDefault();
+        e.stopPropagation();
+        void openLightbox(thumb, src, name, thumb.dataset.lightboxAlt ?? '');
+      },
+      { capture: true, signal },
+    );
+
+    // Close on backdrop click (only when the target IS the backdrop, not
+    // the image or the close button). The stage wrapper and the img
+    // stopPropagation so clicks inside them never reach the backdrop.
+    lightboxState.root?.addEventListener(
+      'click',
+      (e: MouseEvent) => {
+        if (e.target === lightboxState.root) closeLightbox();
+      },
+      { signal },
+    );
+
+    // Stop propagation from the stage so clicking the image (which is
+    // inside the stage) doesn't bubble to the backdrop and close the box.
+    lightboxState.stage?.addEventListener(
+      'click',
+      (e: MouseEvent) => e.stopPropagation(),
+      { signal },
+    );
+
+    lightboxState.closeBtn?.addEventListener(
+      'click',
+      (e: MouseEvent) => {
+        e.stopPropagation();
+        closeLightbox();
+      },
+      { signal },
+    );
+
+    // ESC closes the lightbox, but only when it's open.
+    document.addEventListener(
+      'keydown',
+      (e: KeyboardEvent) => {
+        if (e.key !== 'Escape') return;
+        if (!lightboxState.root?.classList.contains('is-open')) return;
+        e.preventDefault();
+        closeLightbox();
+      },
+      { signal },
+    );
+  };
+
+  // Tear down the listeners — called from stopExperience and on SPA swap.
+  const teardownLightbox = (): void => {
+    killLightbox();
+    lightboxState.aborter?.abort();
+    lightboxState.aborter = null;
+    lightboxState.root = null;
+    lightboxState.backdrop = null;
+    lightboxState.stage = null;
+    lightboxState.img = null;
+    lightboxState.closeBtn = null;
+    lightboxState.activeThumb = null;
+    lightboxState.activeName = null;
+  };
+
+  // One-time global listener: ensure the lightbox is closed before a SPA
+  // navigation so a stale overlay never survives into the next page.
+  document.addEventListener('astro:before-swap', killLightbox);
+
   // Scroll-down tutorial overlay. Shows the "scroll down" hint at most
   // MAX_TUTORIAL_SHOWS times across visits (tracked in localStorage) and
   // auto-hides on the first scroll within the experience detail overlay.
@@ -422,6 +699,9 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
     // are computed correctly.
     experienceHandle = buildExperienceScroll(root);
 
+    // Mount the image lightbox listeners. Idempotent and lightweight.
+    setupLightbox();
+
     // Register the scroll-down tutorial to auto-hide when timeline completes
     window.__initScrollTutorial?.({
       sectionId: 'experience',
@@ -435,6 +715,9 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
       experienceHandle.destroy();
       experienceHandle = null;
     }
+    // Instant cleanup of the lightbox state and listeners so we never
+    // leave dangling handlers when the section closes.
+    teardownLightbox();
   };
 
   // Run on initial page load and after Astro's client-side navigation.

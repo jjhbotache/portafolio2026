@@ -63,6 +63,18 @@
   font-family: 'PixeloidSans', monospace;
 }
 
+/* -webkit- companion for Tailwind v4 backdrop-blur utilities. Tailwind only
+   emits the unprefixed `backdrop-filter`, which Safari honours as of 18 but
+   silently ignores on 9-17. The four classes below are the only ones used
+   in this codebase (see Menu, DetailCloseButton, ContactDetail,
+   ExperienceDetail, AboutMeDetail, and the hero overlay). */
+.backdrop-blur-xs,
+.backdrop-blur-sm,
+.backdrop-blur-md,
+.backdrop-blur-3xl {
+  -webkit-backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
+}
+
 .hide-scrollbar {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* Internet Explorer 10+ */
@@ -96,6 +108,50 @@
 
 .shadow-pulse {
   animation: shadow-pulse 2s ease-in-out infinite;
+}
+
+/* Hide every swiper thumbnail that is NOT the active lightbox source
+   while the lightbox is open. The body carries `data-lightbox-active`
+   and the active thumbnail carries `data-lightbox-active="true"` while
+   the transition is in flight, so the slider's loop clones stop leaking
+   through during the FLIP. The `!important` is required because
+   astro-swiper inline-styles `visibility` on its own slides. */
+body[data-lightbox-active] img[data-lightbox-src]:not([data-lightbox-active="true"]) {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+/* "Ink Bleed" reveal used by the section detail titles (`h2.tron-font`).
+   Replaces the GSAP timeline in `sectionTitleReveal.ts` with a pure CSS
+   keyframe: a left-to-right clip-path wipe followed by a short opacity
+   flicker that settles into the neon glow. JS only swaps the
+   `.ink-bleed` class to retrigger the animation each time a section opens.
+
+   Keyframe percentages mirror the original tweens (0.1s / 1.2s / 0.05s
+   / 0.1s / 0.05s / 0.1s / 0.3s / 0.05s / 1s = 2.95s total). */
+@keyframes ink-bleed {
+  0%      { opacity: 0; clip-path: inset(0 100% 0 0); text-shadow: none; }
+  3.39%   { opacity: 1; }
+  44.07%  { opacity: 1; clip-path: inset(0 0 0 0); }
+  45.76%  { opacity: 0.2; }
+  49.15%  { opacity: 1; }
+  50.85%  { opacity: 0; }
+  54.24%  { opacity: 0.2; }
+  64.41%  { opacity: 1; }
+  66.10%  { opacity: 0; }
+  100%    { opacity: 1; text-shadow: 0 0 8px #07eaff; }
+}
+
+.ink-bleed {
+  animation: ink-bleed 2.95s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ink-bleed {
+    animation: none;
+    opacity: 1;
+    text-shadow: 0 0 8px #07eaff;
+  }
 }
 
     

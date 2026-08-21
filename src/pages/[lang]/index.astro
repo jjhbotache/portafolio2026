@@ -5,7 +5,7 @@ import ExperienceDetail from '../../layouts/sections/ExperienceDetail.astro';
 import AboutMeDetail from '../../layouts/sections/AboutMeDetail.astro';
 import ContactDetail from '../../layouts/sections/ContactDetail.astro';
 import ProjectsDetail from '../../layouts/sections/ProjectsDetail.astro';
-import LanguageToggle from '../../components/LanguageToggle.astro';
+import Menu from '../../components/Menu.astro';
 import { isLang, t, type Lang } from '../../i18n/utils';
 
 const rawLang = Astro.params.lang;
@@ -24,7 +24,7 @@ const descriptionByLang: Record<Lang, string> = {
 
 ---
 <Layout title={titleByLang[lang]} description={descriptionByLang[lang]} lang={lang}>
-  <LanguageToggle />
+  <Menu />
 
   <div
     id="hero-mask"
@@ -83,7 +83,7 @@ const descriptionByLang: Record<Lang, string> = {
     <Icon name="cursor" id="cursor-icon-tutorial" class="hidden " />
     
   </div>
-  <small id="skip-tutorial" class="hidden z-40 font-pixeloid fixed bottom-4 left-[50%] transform -translate-x-1/2 text-white/50 hover:text-white">click to Skip Tutorial</small>
+  <small id="skip-tutorial" class="hidden z-40 font-pixeloid fixed bottom-4 left-[50%] transform -translate-x-1/2 text-white/50 hover:text-white">{t(lang, 'skip-tutorial')}</small>
   
 </Layout>
 
@@ -143,6 +143,14 @@ const descriptionByLang: Record<Lang, string> = {
   .masked > * {
     position: relative;
     z-index: 1;
+  }
+
+  /* Detail overlay opacity. JS still owns the `display: grid|none` flip
+     (it has to be a discrete property for layout), but the opacity fade
+     between visible and hidden is a pure CSS transition. */
+  #detail-overlay.is-open {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   #content, .hero-mask {

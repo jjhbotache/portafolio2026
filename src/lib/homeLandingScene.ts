@@ -14,6 +14,12 @@ import { getLangFromUrl, t } from '../i18n/utils';
 
 const cameraTargetYPosition = 1.5;
 
+// Duration of the `#detail-overlay` opacity fade. Matches the
+// `transition-opacity duration-300` Tailwind utility on the wrapper. JS
+// needs to know this constant to flip `display: none` after the fade
+// completes so the overlay collapses back without blocking pointer events.
+const DETAIL_OVERLAY_FADE_MS = 300;
+
 // Detect GPU capability once per page load. The score decides between
   // the heavy (masked + pinned) entrance timeline and a lightweight
   // alternative that skips the mask and the ScrollTrigger scrub.
@@ -67,7 +73,6 @@ const buildLandingTimeline = async (
   onReset?: () => void,
 ) => {
   let spaceIntroPlayed = false;
-  let previousScrollYProgress = -1;
   
 
   // Wait for the STL fetches kicked off by `preloadLandingEnvironment` to
@@ -102,6 +107,8 @@ const buildLandingTimeline = async (
 
   // gsap.set(landingScene?.overlay, { autoAlpha: 1, pointerEvents: 'none' });
   
+  
+  
   const tl = gsap.timeline({
   scrollTrigger: {
     trigger: heroMask,
@@ -120,7 +127,11 @@ const buildLandingTimeline = async (
     maskSize: '5%',
     ease: 'sine.in',
     duration: 1,
+    onComplete: () => {
+      !spaceIntroPlayed && triggerSpaceIntroAnimation();
+    },
   });
+  
   tl.to(heroMask, {
     opacity: 0,
     ease: 'sine.in',
@@ -141,7 +152,7 @@ const buildLandingTimeline = async (
     ease: 'sine.in',
     duration: 0.4,
     onComplete: () => {
-      triggerSpaceIntroAnimation();
+      !spaceIntroPlayed && triggerSpaceIntroAnimation();
     },
   }, 0.6);
 
@@ -172,6 +183,13 @@ function startTutorialIfNeeded(overlay: HTMLElement | null,forceShow: boolean = 
     if (!isNaN(shownCount) && shownCount >= 2 && !forceShow) return;
 
     const tutorialOverlay = overlay.querySelector('#tutorial-overlay') as HTMLElement | null;
+    // NOTE: `#tutorial-icon` is queried but no element with that id is
+    // rendered in the page template — the actual cursor icon is
+    // `#cursor-icon-tutorial` (which has its own CSS keyframe animation
+    // defined in `[lang]/index.astro`). As a result the GSAP bobby-trapped
+    // loop below is currently dead code; the guard returns before any
+    // tween runs. If a `#tutorial-icon` element is added later the
+    // timeline will spring back to life without changes.
     const tutorialIcon = overlay.querySelector('#tutorial-icon') as HTMLElement | null;
     if (!tutorialOverlay || !tutorialIcon) return;
 
@@ -319,6 +337,15 @@ function SpaceIntroAnimation3D(landingScene: LandingScene) {
       window.scrollTo(0, scrollerPos);
       
       document.querySelector("#skip-tutorial")?.classList.add("hidden");
+
+      // Signal the menu popup that the space flythrough is done so it
+      // can play its first-time icon-morph intro. We dispatch both a
+      // CustomEvent (caught by the live listener) and a window flag
+      // (caught by the script if it mounted after this fired) so the
+      // timing race between scene init and Astro hydration can't drop
+      // the signal.
+      window.dispatchEvent(new CustomEvent('portfolio:menu-intro-ready'));
+      (window as unknown as { __menuIntroPending?: boolean }).__menuIntroPending = true;
       
     },
   });
@@ -555,7 +582,11 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       // is a 3x3 grid (grid-cols-3 grid-rows-3) so each section's wrapper
       // (display: contents) lays its title, content, #modelBg and
       // #detail-close out into the right cells when it becomes active.
-      gsap.set(detailOverlay, { display: 'grid', opacity: 0, pointerEvents: 'none' });
+      // `display` must stay a discrete DOM flip (CSS can't transition from
+      // `display: none` to a layout box), but the opacity fade-in/out is
+      // now a pure CSS transition triggered by the `.is-open` class.
+      detailOverlay.style.display = 'grid';
+      detailOverlay.classList.remove('is-open');
 
       // Each section owns its own #modelBg and #detail-close inside a
       // `display: contents` wrapper. Unhide the active wrapper BEFORE
@@ -707,9 +738,14 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       if (activeSection) {
         showActiveDetailView(activeSection.htmlDetailViewSelector);
       }
-      tl.to(detailOverlay, { opacity: 1, display: 'grid', pointerEvents: 'auto', duration: 0.2 }, "<");
+tl.call(() => {
+        // Trigger the CSS opacity fade-in. The wrapper already has
+        // `display: grid` from the pre-setup above and the
+        // `transition-opacity duration-300` utility handles the timing.
+        detailOverlay.classList.add('is-open');
+      }, [], "<");
       
-      
+
 
       // After the fade-in finishes, run the section's entry animations
       // (typing, marquee, ScrollTrigger refresh, ...). We wait a tick to
@@ -767,7 +803,17 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
       // Reset the camera target to the default position 
       tl.to(landingScene.controls.target, { x: 0, y: cameraTargetYPosition, z: 0, duration: 0.3, ease: 'power3.inOut' }, "<");
       
-      tl.to(detailOverlay, { opacity: 0, display: 'none', pointerEvents: 'none', duration: 0.3 }, 0);
+      // Close the detail overlay: kick off the opacity fade-out (CSS
+      // transition) and schedule the discrete `display: none` flip for
+      // after the transition completes. The re-entrancy guard re-checks
+      // `.is-open` before hiding so a quick reopen during the fade does
+      // not strand the overlay with `display: none`.
+      detailOverlay.classList.remove('is-open');
+      window.setTimeout(() => {
+        if (!detailOverlay.classList.contains('is-open')) {
+          detailOverlay.style.display = 'none';
+        }
+      }, DETAIL_OVERLAY_FADE_MS);
       hideAllDetailViews();
 
       // Stop the section's running animations (typing, etc.) and reset the
@@ -888,8 +934,26 @@ function setupDetailViewToggle(landingScene: LandingScene, overlay: HTMLElement)
   overlay.addEventListener('pointerup', handlePointerUp);
   overlay.addEventListener('click', handleOverlayClick);
 
+  // Programmatic open used by the menu popup. The orchestrator handles
+  // the camera slide and then asks the toggle to open. We expose it
+  // through the same handle so SPA re-init can still call `close`.
+  let pendingOpenSection: number | null = null;
+
+  const navigateToSectionAndOpenDetailView = (sectionIndex: number) => {
+    // ensure it's all scrolled to the bottom, otherwise scroll
+    const scrolled = window.scrollY + window.innerHeight >= document.body.scrollHeight - 1;
+    if (!scrolled) {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      return
+    }
+    
+    landingScene.navigateToSection(sectionIndex).then(() => {
+      handleToggle("open");
+    });
+  };
   return {
     close: () => handleToggle("close"),
+    openSection: navigateToSectionAndOpenDetailView,
   };
 }
 
@@ -941,6 +1005,26 @@ export const initializeHomeLandingScene = async (lang: Lang = 'en') => {
     ? setupDetailViewToggle(landingScene, overlay)
     : null;
 
+  // The menu popup dispatches a CustomEvent with the target section index
+  // when the user picks a section. We bridge it into the toggle so the
+  // camera slides to the section and then the detail view opens.
+  if (typeof window !== 'undefined') {
+    window.addEventListener('portfolio:navigate-section', (event: Event) => {
+      const detail = (event as CustomEvent<{ sectionIndex: number }>).detail;
+      const sectionIndex = detail?.sectionIndex;
+      if (typeof sectionIndex !== 'number') return;
+      detailToggle?.openSection(sectionIndex);
+    });
+
+    // Mobile-only quick escape from the menu: the popup exposes a "Back
+    // to home" item that fires this event. `close()` is a no-op when the
+    // detail view is already closed, so it's safe to dispatch from any
+    // menu state.
+    window.addEventListener('portfolio:close-detail', () => {
+      detailToggle?.close();
+    });
+  }
+
 
 
   // Register a one-shot `pagehide` cleanup for any lightweight state
@@ -977,11 +1061,12 @@ export const initializeHomeLandingScene = async (lang: Lang = 'en') => {
 
   // Reveal the scroll-down arrow only after GSAP + Three.js + STL fetches
   // + the landing timeline have all settled. The element starts hidden
-  // (opacity 0) in CSS and fades in via its `transition-opacity` utility.
+  // (opacity 0) in CSS and the class swap lets the `transition-all
+  // duration-500` utility on the element drive the fade-in.
   const landingArrow = document.querySelector<HTMLElement>('#landing-arrow');
   if (landingArrow) {
     setTimeout(() => {
-      landingArrow.style.opacity = '1';
+      landingArrow.classList.add('opacity-100');
     }, 50);
   }
 };

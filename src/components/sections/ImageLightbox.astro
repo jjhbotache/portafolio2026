@@ -1,0 +1,70 @@
+---
+// Fullscreen image lightbox wired to the experience swiper.
+//
+// Markup only: no JS or state. The orchestrator (ExperienceDetail.astro)
+// owns open/close, focus trapping and the View Transition dance.
+
+import { t, type Lang } from '../../i18n/utils';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props as Props;
+---
+
+<div
+  id="image-lightbox"
+  class="image-lightbox fixed inset-0 z-100 flex items-center justify-center bg-black/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300"
+  role="dialog"
+  aria-modal="true"
+  aria-hidden="true"
+  aria-label={t(lang, 'ui.imageLightboxAria')}
+  tabindex="-1"
+>
+  <button
+    id="image-lightbox-close"
+    type="button"
+    class="image-lightbox-close absolute top-4 right-4 md:top-6 md:right-6 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-md border border-white/20 text-white grid place-content-center text-3xl font-pixeloid transition-colors z-10"
+    aria-label={t(lang, 'ui.closeDetailAria')}
+    data-i18n-attr={`aria-label:ui.closeDetailAria`}
+  >
+    <span class="leading-none translate-x-[.07em] transform ">&times;</span>
+  </button>
+
+  <div
+    id="image-lightbox-stage"
+    class="image-lightbox-stage w-full h-full flex items-center justify-center p-6 md:p-10"
+  >
+    <img
+      id="image-lightbox-img"
+      class="image-lightbox-img max-w-[92vw] max-h-[88vh] object-contain rounded-md shadow-2xl select-none"
+      alt=""
+      decoding="async"
+      draggable="false"
+    />
+  </div>
+</div>
+
+<style>
+  .image-lightbox.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .image-lightbox:not(.is-open) .image-lightbox-close {
+    visibility: hidden;
+  }
+
+  ::view-transition-old(image-lightbox-img),
+  ::view-transition-new(image-lightbox-img) {
+    animation-duration: 450ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .image-lightbox {
+      transition: none;
+    }
+  }
+</style>

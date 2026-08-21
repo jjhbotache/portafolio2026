@@ -28,6 +28,7 @@ export const createContactBackground = (): TitleBackgroundController => {
   return {
     modelPaths: CONTACT_MODEL_PATHS,
     onLoad: ({ sourceModels, backdropGroup, titleSize }) => {
+      backdropGroup.name = 'contactBackground';
       const sourceModel = sourceModels[0];
       if (!sourceModel) return [];
 
