@@ -1,1 +1,0 @@
-import{t as e}from"./sectionTitleReveal.CvTjsi9L.js";window.__contactHooks={start:()=>{let t=document.querySelector(`#contactDetailedView`);t&&e(t.querySelectorAll(`h2.tron-font`))}};

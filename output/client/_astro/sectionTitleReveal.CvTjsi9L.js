@@ -1,1 +1,0 @@
-var e=e=>{e.classList.remove(`ink-bleed`),e.offsetWidth,e.classList.add(`ink-bleed`)},t=t=>{if(!t)return;let n=Array.from(t instanceof HTMLElement?[t]:Array.from(t));n.length!==0&&n.forEach(e)};export{t};
