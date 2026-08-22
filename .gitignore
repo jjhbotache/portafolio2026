@@ -4,6 +4,10 @@ dist/
 # generated types
 .astro/
 
+.agents/
+.playwright-mcp/
+.vscode/
+
 # dependencies
 node_modules/
 
