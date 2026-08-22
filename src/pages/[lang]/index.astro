@@ -46,9 +46,13 @@ const descriptionByLang: Record<Lang, string> = {
         fetchpriority="low"
         class="fixed h-[110vh] -z-1 transform left-[25%] -translate-x-1/2 top-[65%] -translate-y-1/2 drop-shadow-secondary/20 drop-shadow-xl opacity-15 md:opacity-100 "
       />
-      
-      <img class="hidden md:block orbit-ball" src="/py_ball.png" alt="" srcset="">
-      <img class="hidden md:block orbit-ball orbit-ball--lag" src="/js_ball.png" alt="" srcset="">
+      {["/js_ball.png", "/react_ball.png", "/py_ball.png", "/fastapi_ball.png" ].map((src, index) => (
+        <img
+          class={`hidden md:block orbit-ball`}
+          src={src}
+          style={`animation-delay: ${index * 1}s;`}
+        />
+      ))}
       
       
       <div class="pr-[22vw] pixel-font basis-[85%] md:basis-3/5 md:pr-[19vw] flex flex-col justify-center items-end gap-2 text-end">
@@ -275,9 +279,6 @@ const descriptionByLang: Record<Lang, string> = {
         filter: drop-shadow(0px 0px .3em rgb(0,0,0));
       }
 
-      .orbit-ball--lag {
-        animation-delay: -1.5s;
-      }
     }
     
 

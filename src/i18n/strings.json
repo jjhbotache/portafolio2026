@@ -1,5 +1,13 @@
 {
   "es": {
+    "website-title": "Portafolio de Juan José Huertas",
+    "website-description": "Conozcámonos!",
+    "og-title": "Portafolio de Juan José Huertas",
+    "og-description": "Conozcámonos!",
+    "og-image": "/img_es.png",
+    "og-url": "/",
+    "og-locale": "es_ES",
+
     "hero-subtitle": "Javascript y Python developer",
     "landing-loading": "Cargando...",
     "skip-tutorial": "clickea para omitir",
@@ -47,6 +55,14 @@
     "months.short": ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
   },
   "en": {
+    "website-title": "Juan José Huertas Portfolio",
+    "website-description": "Meet me!",
+    "og-title": "Juan José Huertas Portfolio",
+    "og-description": "Meet me!",
+    "og-image": "/img_en.png",
+    "og-url": "/",
+    "og-locale": "en_US",
+    
     "hero-subtitle": "Javascript and Python developer",
     "landing-loading": "Loading...",
     "skip-tutorial": "click to Skip",

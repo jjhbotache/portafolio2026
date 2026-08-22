@@ -1,7 +1,7 @@
 ---
 import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
-import { isLang, type Lang } from '../i18n/utils';
+import { t,isLang, type Lang } from '../i18n/utils';
 
 interface Props {
   title?: string;
@@ -10,8 +10,6 @@ interface Props {
 }
 
 const {
-  title = 'Juan José Huertas — Portfolio',
-  description = 'Interactive portfolio built with Astro, Three.js and GSAP.',
   lang = 'en',
 } = Astro.props;
 
@@ -23,8 +21,8 @@ const safeLang: Lang = isLang(lang) ? lang : 'en';
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
-		<meta name="description" content={description} />
-		<title>{title}</title>
+		<meta name="description" content={t(safeLang,'website-description')} />
+		<title>{t(safeLang,'website-title')}</title>
 
 		<!--
 		  Kick off the heaviest 3D assets as soon as the HTML is parsed so the
@@ -58,7 +56,17 @@ const safeLang: Lang = isLang(lang) ? lang : 'en';
 		  the browser doesn't deprioritise other assets.
 		-->
 		<link rel="preload" as="image" href="/me.png" crossorigin="anonymous" fetchpriority="low" />
-
+		
+		<!-- ===================== Open Graph ===================== -->
+		<meta property="og:type"        content="website" />
+		<meta property="og:site_name"   content={t(safeLang, 'og-site_name')} />
+		<meta property="og:title"       content={t(safeLang, 'og-site_name')} />
+		<meta property="og:description" content={t(safeLang, 'og-site_name')} />
+		<meta property="og:image"       content={t(safeLang, 'og-site_name')} />
+		<meta property="og:image:width"  content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:url"         content={t(safeLang, 'og-site_name')} />
+		<meta property="og:locale"      content={t(safeLang, 'og-site_name')} />
 		<ClientRouter  />
 	</head>
 	<body>

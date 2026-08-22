@@ -51,3 +51,9 @@
   - [✅] poder volver en mobile a la primera pantalla de inicio
 - [✅]add fullscreen imgs
 
+- [✅]fix experience media height
+- [✅]loading text less visible
+- [✅]add style for whatsapp send
+- [✅]add tech spheres
+
+
