@@ -3,7 +3,7 @@ title:
   es: DevKalk
   en: DevKalk
 img: /projects/imgs/devkalk.gif
-importance: 5
+importance: 6
 technologies:
   es:
     - React

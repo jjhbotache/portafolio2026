@@ -8,6 +8,12 @@ import ProjectsDetail from '../../layouts/sections/ProjectsDetail.astro';
 import Menu from '../../components/Menu.astro';
 import { isLang, t, type Lang } from '../../i18n/utils';
 
+export function getStaticPaths() {
+  return [
+    { params: { lang: 'en' } },
+    { params: { lang: 'es' } },
+  ];
+}
 const rawLang = Astro.params.lang;
 const lang: Lang = isLang(rawLang) ? rawLang : 'en';
 
@@ -32,6 +38,7 @@ const descriptionByLang: Record<Lang, string> = {
     >
     <div id="content" class="relative flex items-center justify-end gap-0 md:gap-10 h-screen bg-linear-to-br from-gray-900 to-gray-950 overflow-hidden">
       <img
+        id="hero-me"
         src="/me.png"
         alt="me"
         loading="lazy"
@@ -40,7 +47,11 @@ const descriptionByLang: Record<Lang, string> = {
         class="fixed h-[110vh] -z-1 transform left-[25%] -translate-x-1/2 top-[65%] -translate-y-1/2 drop-shadow-secondary/20 drop-shadow-xl opacity-15 md:opacity-100 "
       />
       
-      <div class="pr-[22vw] pixel-font basis-[85%] md:basis-3/5 md:pr-[17vw] 2xl:pr-[16em] flex flex-col justify-center items-end gap-2 text-end">
+      <img class="hidden md:block orbit-ball" src="/py_ball.png" alt="" srcset="">
+      <img class="hidden md:block orbit-ball orbit-ball--lag" src="/js_ball.png" alt="" srcset="">
+      
+      
+      <div class="pr-[22vw] pixel-font basis-[85%] md:basis-3/5 md:pr-[19vw] flex flex-col justify-center items-end gap-2 text-end">
         <h1 class=" tracking-widest font-bold text-2xl md:text-6xl 2xl:text-8xl   bg-linear-to-br from-secondary via-tertiary to-primary to-80% bg-clip-text text-transparent align-middle " >
           Juan Jose Huertas
         </h1>
@@ -50,7 +61,13 @@ const descriptionByLang: Record<Lang, string> = {
       </div>
 
       
-
+      
+      <small
+        id="landing-loading"
+        class=" font-pixeloid fixed bottom-[20vh] left-[50%] transform -translate-x-1/2 text-white/70 tracking-widest animate-pulse transition-all duration-500 pointer-events-none"
+      >
+        {t(lang, 'landing-loading')}
+      </small>
       <div id="landing-arrow" class=" fixed bottom-[15%] left-[50%] transform -translate-x-1/2 h-40 w-40 flex items-center justify-center animate-bounce transition-all opacity-0 duration-500" data-tutorial-icon>
         <span class="text-secondary text-6xl font-pixeloid transform rotate-180 ">^</span>
       </div>
@@ -231,7 +248,72 @@ const descriptionByLang: Record<Lang, string> = {
         animation-duration: 1ms !important;
       }
     }
+
+    /* ============================================================
+       Orbit animation for the tech balls (py_ball / js_ball)
+       around hero-me. Each ball travels from bottom-left to
+       top-right in front of hero-me (z-index 5 > -1), the z-index
+       flips to -5 at the apex, and the ball returns to bottom-left
+       behind hero-me. The two balls are phase-offset by half a
+       cycle so they always sit on opposite ends of the path.
+       ============================================================ */
+    /* only in medium or more */
+    @media (width >= 768px) {
+      .orbit-ball {
+        position: fixed;
+        left: 8vw;
+        bottom: 10vh;
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 5;
+        --orbit-dx: 32vw;
+        --orbit-dy: -32vh;
+        animation: orbit-ball 8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+        will-change: transform, z-index;
+        filter: drop-shadow(0px 0px .3em rgb(0,0,0));
+      }
+
+      .orbit-ball--lag {
+        animation-delay: -1.5s;
+      }
+    }
     
+
+    @keyframes orbit-ball {
+      0% {
+        transform: translate(0, 0);
+        z-index: 5;
+      }
+      50% {
+        transform: translate(var(--orbit-dx), var(--orbit-dy));
+        z-index: 5;
+      }
+      50.01% {
+        transform: translate(var(--orbit-dx), var(--orbit-dy));
+        z-index: -5;
+      }
+      100% {
+        transform: translate(0, 0);
+        z-index: -5;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .orbit-ball {
+        width: 44px;
+        height: 44px;
+        --orbit-dx: 30vw;
+        --orbit-dy: -50vh;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .orbit-ball {
+        animation: none;
+      }
+    }
 
 </style>
 

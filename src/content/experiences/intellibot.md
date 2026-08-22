@@ -11,6 +11,7 @@ enterprises:
 imgs:
   - "/experience/intellibot/Screenshot_2025-04-18_10-42-01_ftuzp4_harlkw.png"
   - "/experience/intellibot/Screenshot_2025-04-18_10-40-49_lydfoj_tiegtf.png"
+importance: 1
 technologies:
   es:
     - React

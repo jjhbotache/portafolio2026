@@ -3,7 +3,7 @@ title:
   es: Iphone 4s api
   en: Iphone 4s api
 img: /projects/imgs/iphone_api.png
-importance: 3
+importance: 1
 technologies:
   es:
     - Python

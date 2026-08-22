@@ -24,10 +24,10 @@
 - [✅]fix tutorial in mobile
 - [✅]fix videos
 - [✅]adding support for tablet 
-- [ ]enhance media (img to .yxz)
-- [ ]adding experiences
-- [ ]cleanning projects
-- [ ]fixing bugs:
+- [✅]enhance media (img to .yxz)
+- [✅]adding experiences
+- [✅]cleanning projects
+- [✅]fixing bugs:
   - [✅]fix change languaje bug
   - [➖]UX posible enhance when back, close detailed view
   - [✅]agregar text de saltar la animacion de entrada

@@ -3,6 +3,7 @@ title:
   es: Orders Quotator
   en: Orders Quotator
 img: /projects/imgs/orders quotator.gif
+hidden: true
 importance: 4
 technologies:
   es:

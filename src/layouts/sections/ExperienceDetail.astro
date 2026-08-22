@@ -8,7 +8,7 @@
 import { getCollection } from 'astro:content';
 import { marked } from 'marked';
 import { Icon } from 'astro-icon/components';
-import { Swiper, SwiperWrapper, SwiperSlide, SwiperPagination } from 'astro-swiper';
+import { Swiper, SwiperWrapper, SwiperSlide, SwiperPagination, SwiperButtonNext, SwiperButtonPrev } from 'astro-swiper';
 import { resolveBilingual, t, type Lang } from '../../i18n/utils';
 import DetailCloseButton from '../../components/sections/DetailCloseButton.astro';
 import ImageLightbox from '../../components/sections/ImageLightbox.astro';
@@ -16,10 +16,18 @@ import ModelBgAnchor from '../../components/sections/ModelBgAnchor.astro';
 import SectionTitle from '../../components/sections/SectionTitle.astro';
 import ScrollDownTutorial from '../../components/sections/ScrollDownTutorial.astro';
 
+
 interface Props { lang: Lang }
 const { lang } = Astro.props as Props;
 
 const experiences = await getCollection('experiences');
+
+// Sort by `importance` (descending) so the most prominent roles lead the
+// horizontal scroll. We sort on a copy to avoid mutating the collection
+// returned by Astro's `getCollection`.
+const sortedExperiences = [...experiences].sort(
+  (a, b) => b.data.importance - a.data.importance,
+);
 
 // Short month names come from the i18n dictionary so they switch with the
 // URL locale without a hardcoded `monthsEs` / `monthsEn` pair.
@@ -47,10 +55,17 @@ interface ResolvedExperience {
   paginationClass: string;
 }
 
-const buildPeriod = (exp: typeof experiences[number], monthList: string[]) =>
-  `${monthList[exp.data.start.month - 1]} ${exp.data.start.year} — ${monthList[exp.data.end.month - 1]} ${exp.data.end.year}`;
+const buildPeriod = (exp: typeof experiences[number], monthList: string[]) =>{
+  let end = '';
+  if (!exp.data.end) {
+   end = t(lang, 'experience.present');
+  }else{
+    end = monthList[exp.data.end.month - 1] + ' ' + exp.data.end.year;
+  }
+  return  `${monthList[exp.data.start.month - 1]} ${exp.data.start.year} — ${end}`
+};
 
-const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
+const resolvedExperiences: ResolvedExperience[] = sortedExperiences.map((exp) => {
   const periodEs = buildPeriod(exp, t('es', 'months.short') as unknown as string[]);
   const periodEn = buildPeriod(exp, t('en', 'months.short') as unknown as string[]);
 
@@ -109,7 +124,7 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
 
       {resolvedExperiences.map((exp) => (
       <article
-            class="experience-card group absolute inset-y-0 left-5 md:left-20 h-[90%]  w-[80vw] md:w-[60vw] max-w-3xl p-6 flex flex-col md:flex-row gap-6
+            class="experience-card group min-w-2/3 absolute inset-y-0 left-5 md:left-20 h-[90%]  w-[80vw] md:w-[60vw] max-w-3xl p-6 flex flex-col md:flex-row gap-6
             bg-linear-to-br from-primary to-blue-950 to-80%
             overflow-hidden
             "
@@ -172,8 +187,19 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
                       </span>
                     ))}
                     </div>
-                    <div class="mt-2 text-sm text-white/70 leading-relaxed prose prose-invert max-w-none" set:html={exp.contentHtml} />
+                    <div id={`experienceContent-${exp.id}`} class="mt-2 text-sm text-white/70 leading-relaxed prose prose-invert max-w-none" set:html={exp.contentHtml} />
                     <small class="text-xs text-white/50"> {t(lang, 'experience.closeDetail')} </small>
+                    <script is:inline define:vars={{ expId: exp.id }}>
+                      document.addEventListener('DOMContentLoaded', () => {
+                        const container = document.getElementById(`experienceContent-${expId}`);
+                        if (container) {
+                          container.querySelectorAll('a').forEach(link => {
+                            link.setAttribute('target', '_blank');
+                            link.style.textDecoration = 'underline';
+                          });
+                        }
+                      });
+                    </script>
                   </div>
               </div>
             </div>
@@ -189,6 +215,10 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
                     pagination: {
                       el: `.${exp.paginationClass}`,
                       clickable: true,
+                    },
+                    navigation: {
+                      nextEl: '.swiper-button-next',
+                      prevEl: '.swiper-button-prev',
                     },
                   }}
                 >
@@ -210,6 +240,8 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
                     ))}
                   </SwiperWrapper>
                   <SwiperPagination class={exp.paginationClass} />
+                  <SwiperButtonPrev class=" text-tertiary/50 opacity-25  hover:opacity-100 transition-opacity duration-150" />
+                  <SwiperButtonNext class=" text-tertiary/50 opacity-25  hover:opacity-100 transition-opacity duration-150" />
                 </Swiper>
               ) : (
                 <div class="w-full h-full flex items-center justify-center text-white/40 text-sm">
@@ -301,6 +333,12 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
       paused: true,
       defaults: { ease: 'power2.inOut' },
     });
+    
+    // first set all except first card out of the view
+    for (let k = 1; k < numCards; k++) {
+      timeline.set(cards[k], { x: '100vw' });
+    }
+    
 
     // For each new card k (1..N-1):
     //   - all previously visible cards shift left by STACK_OFFSET
@@ -309,6 +347,8 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
     // with the newest card always on top.
     for (let k = 1; k < numCards; k++) {
       const segmentTime = (k - 1) * STEP_DURATION;
+      
+      // first set cards out of the view
 
       for (let i = 0; i < k; i++) {
         timeline.to(
@@ -326,7 +366,7 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
       timeline.addLabel(`card-${k}`, segmentTime);
       timeline.fromTo(
         cards[k],
-        { x: '200%' },
+        { x: '100vw' },
         { x: 0, duration: STEP_DURATION },
         segmentTime,
       );
@@ -761,6 +801,6 @@ const resolvedExperiences: ResolvedExperience[] = experiences.map((exp) => {
   opacity: 0.25;
   }
   .experience-card:not(:first-child) {
-    transform: translateX(200%);
+    transform: translateX(100vw);
   }
 </style>

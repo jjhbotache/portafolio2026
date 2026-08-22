@@ -3,7 +3,7 @@ title:
   es: Memorable3
   en: Memorable3
 img: /projects/imgs/memorable.gif
-importance: 5
+importance: 4
 technologies:
   es:
     - React

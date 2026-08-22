@@ -12,7 +12,8 @@ import type { Lang } from '../../i18n/utils';
 import gsap from 'gsap';
 
 const bloomResolutionScale = 1/8;
-const pixelRatio = .7;
+// const pixelRatio = .5;
+const pixelRatio = Math.min(window.devicePixelRatio, 1.5);
 export const DETAIL_VIEW_PIXEL_RATIO = 0.2;
 // 30 FPS is a much better target than the previous 14: the post-process
 // chain (RenderPass + UnrealBloom) is cheap on modern GPUs and the
@@ -345,9 +346,9 @@ export const createHomeLandingThreeScene = (
   const getPixelRatio = () => currentPixelRatio;
 
 
-  const MAX_YAW_DEG = 20;
+  const MAX_YAW_DEG = 10;
   const MIN_YAW_DEG = 5;
-  const GROWTH = 1.4;
+  const GROWTH = 1.1;
   const TICK_DURATION = 0.2;
   const yawRadians = (deg: number) => (deg * Math.PI) / 180;
 

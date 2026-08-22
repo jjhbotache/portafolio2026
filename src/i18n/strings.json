@@ -1,6 +1,7 @@
 {
   "es": {
-    "hero-subtitle": "Curioso por naturaleza, creador por elección.",
+    "hero-subtitle": "Javascript y Python developer",
+    "landing-loading": "Cargando...",
     "skip-tutorial": "clickea para omitir",
     "tutorial.next": "Siguiente",
     "tutorial.prev": "Anterior",
@@ -42,10 +43,12 @@
     "experience.noImages": "Sin imágenes",
     "experience.viewMore": "ver más",
     "experience.closeDetail": "toca para cerrar",
+    "experience.present": "Presente",
     "months.short": ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
   },
   "en": {
-    "hero-subtitle": "Curious by nature, creator by choice.",
+    "hero-subtitle": "Javascript and Python developer",
+    "landing-loading": "Loading...",
     "skip-tutorial": "click to Skip",
     "tutorial.next": "Next",
     "tutorial.prev": "Previous",
@@ -87,6 +90,7 @@
     "experience.noImages": "No images",
     "experience.viewMore": "view more",
     "experience.closeDetail": "tap to close",
+    "experience.present": "Present",
     "months.short": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
   }
 }

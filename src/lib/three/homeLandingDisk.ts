@@ -45,6 +45,13 @@ const applyDiskWobbleAnimation = (diskGroup: THREE.Mesh) => {
   });
 };
 
+// Kick off the disk STL fetch without attaching the meshes. The landing
+// orchestrator awaits this before enabling scroll so the disk is fully
+// resolved (and cached) before the user can trigger the space intro.
+export const preloadLandingDisk = (): Promise<void> => {
+  return fetchCachedStl('/3d/disk.stl').then(() => undefined);
+};
+
 export const loadLandingDisk = (diskRoot: THREE.Group) => {
   diskRootRef = diskRoot;
 

@@ -1,6 +1,31 @@
 import * as THREE from 'three';
 
-const textureLoader = new THREE.TextureLoader();
+// Module-level LoadingManager shared by every texture fetch below. The
+// promise it backs (`texturesReady`) is consumed by the landing
+// orchestrator to freeze scroll until every PBR texture the platform
+// and the floor depend on has actually decoded. Without it the mask
+// shrink and the space intro can run with the materials still showing
+// as flat color (or fully black) on a cold cache, because
+// `THREE.TextureLoader` resolves its callback without waiting for the
+// underlying `Image` to finish decoding.
+const loadingManager = new THREE.LoadingManager();
+const textureLoader = new THREE.TextureLoader(loadingManager);
+
+let resolveTexturesReady!: () => void;
+const texturesReady = new Promise<void>((resolve) => {
+  resolveTexturesReady = resolve;
+});
+
+loadingManager.onLoad = () => {
+  resolveTexturesReady();
+};
+loadingManager.onError = (url) => {
+  // Resolve anyway so a single failed texture doesn't strand the page
+  // in a frozen scroll state. The material just renders flat-colored.
+  console.warn('[landing textures] failed to load:', url);
+  resolveTexturesReady();
+};
+
 const textures = {
   metal: {
     map: textureLoader.load('/3d/textures/metal/Metal029_1K-JPG_Color.jpg'),
@@ -129,6 +154,8 @@ const getBaseMaterialParams = (materialName: MaterialName): THREE.MeshStandardMa
     metalness: 0.2,
   };
 };
+
+export { texturesReady };
 
 export const clearLandingMaterialCache = () => {
   materialCache.forEach((material) => material.dispose());

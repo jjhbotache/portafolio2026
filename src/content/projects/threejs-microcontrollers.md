@@ -4,6 +4,7 @@ title:
   en: Three js and Microcontrollers
 img: /projects/imgs/microcontrollers.gif
 importance: 3
+hidden: true
 technologies:
   es:
     - Three.js

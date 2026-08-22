@@ -21,6 +21,7 @@ imgs:
   - "/experience/dpagosPlatform/dpagos5.png"
   - "/experience/dpagosPlatform/dpagos6.png"
   - "/experience/dpagosPlatform/dpagos7.png"
+importance: 2
 technologies:
   es:
     - React

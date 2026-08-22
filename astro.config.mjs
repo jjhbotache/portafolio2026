@@ -10,11 +10,7 @@ export default defineConfig({
     '/': '/es'
   },
   
-  output: 'server',
-
-  adapter: node({
-    mode: 'standalone'
-  }),
+  output: "static",
 
   i18n: {
     defaultLocale: 'en',

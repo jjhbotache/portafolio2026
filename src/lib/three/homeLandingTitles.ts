@@ -12,6 +12,32 @@ import type { TitleBackgroundController } from './titlesBackgrounds/types';
 const buildTitleSequence = (lang: Lang): readonly string[] =>
   sections.map((s) => resolveSectionModelPath(s, lang));
 
+// Prime the model cache with every STL/GLTF the landing titles and their
+// backdrops will request. Called from the orchestrator before it mounts
+// the scene so the subsequent `fetchCachedStl`/`fetchCachedGltf` calls
+// inside `createLandingTitles` resolve synchronously (cache hits). The
+// shared cache in `modelCache.ts` dedupes concurrent requests for the
+// same URL, so calling this twice (e.g. across SPA re-inits) is safe.
+export const preloadLandingModels = async (lang: Lang): Promise<void> => {
+  const titlePaths = buildTitleSequence(lang);
+  const backdropPaths = sections.flatMap((s) => s.background().modelPaths);
+  const allPaths = new Set<string>([...titlePaths, ...backdropPaths]);
+
+  await Promise.all(
+    Array.from(allPaths).map(async (path) => {
+      const lower = path.toLowerCase();
+      if (lower.endsWith('.stl')) {
+        await fetchCachedStl(path);
+        return;
+      }
+      // GLTF / GLB — `loadAsync` resolves only after the .gltf + .bin (or
+      // the embedded buffers inside the .glb) finish downloading and the
+      // scene graph is built, so a single await covers the full payload.
+      await fetchCachedGltf(path);
+    }),
+  );
+};
+
 const ANGLE_PER_TITLE = (Math.PI * 2) / sections.length;
 
 const normalizeAngle = (angle: number) => {

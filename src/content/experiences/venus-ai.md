@@ -11,6 +11,7 @@ enterprises:
 imgs:
   - "/experience/venusAI/Screenshot_27_cgskb2_dgvojd.png"
   - "/experience/venusAI/Screenshot_26_oynq8b_q7hggo.png"
+importance: 1
 technologies:
   es:
     - Shadcn

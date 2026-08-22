@@ -2,8 +2,9 @@
 title:
   es: Surebets Bettor
   en: Surebets Bettor
-img: /projects/imgs/surebetsBettor.jpeg
+img: /projects/imgs/surebetsBettor.jpg
 importance: 2
+hidden: true
 technologies:
   es:
     - Python

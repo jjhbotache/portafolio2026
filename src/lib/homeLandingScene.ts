@@ -1,8 +1,10 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { createHomeLandingThreeScene, resetCameraToInitialPosition, DETAIL_VIEW_PIXEL_RATIO, type LandingScene } from './three/homeLandingThreeScene';
+import { texturesReady } from './three/materialFactory';
 import { CatmullRomCurve3, MathUtils, Vector3, Camera, Group } from 'three';
-import { fadeOutDisk, fadeInDisk } from './three/homeLandingDisk';
+import { fadeOutDisk, fadeInDisk, preloadLandingDisk } from './three/homeLandingDisk';
+import { preloadLandingModels } from './three/homeLandingTitles';
 import { fadeOutFloor, fadeInFloor, preloadLandingEnvironment, loadLandingEnvironment } from './three/homeLandingEnvironment';
 import { sections } from './sections';
 import { detectGpuCapabilities  } from './gpuCapabilities';
@@ -64,6 +66,24 @@ let isSpaceIntroPlaying = false;
 const lightCleanupFns: Array<() => void> = [];
 let lightPagehideRegistered = false;
 
+// Wait until the hero portrait decodes. Wrapped in a Promise so it
+// composes with the `Promise.all` inside `buildLandingTimeline`. We use
+// `img.decode()` when available (it resolves only when the raster is
+// ready to paint, which is what we actually care about) and fall back to
+// the `complete + onload` pair for older browsers.
+const waitForHeroImage = (): Promise<void> => {
+  const img = document.querySelector<HTMLImageElement>('#hero-me');
+  if (!img) return Promise.resolve();
+  if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+  if (typeof img.decode === 'function') {
+    return img.decode().catch(() => undefined);
+  }
+  return new Promise<void>((resolve) => {
+    img.addEventListener('load', () => resolve(), { once: true });
+    img.addEventListener('error', () => resolve(), { once: true });
+  });
+};
+
 const scrollerPos =  400;
 gsap.registerPlugin(ScrollTrigger);
 const buildLandingTimeline = async (
@@ -73,14 +93,77 @@ const buildLandingTimeline = async (
   onReset?: () => void,
 ) => {
   let spaceIntroPlayed = false;
-  
 
-  // Wait for the STL fetches kicked off by `preloadLandingEnvironment` to
-  // settle before consuming them in `loadLandingEnvironment`. Both calls hit
-  // the shared `stlGeometryCache`, so the second call is effectively free.
-  await preloadLandingEnvironment();
-  if (landingScene) {
-    loadLandingEnvironment(landingScene.scene);
+  // Freeze body scroll until every asset the landing depends on has
+  // loaded: platform/floor STLs, disk + title + backdrop geometry, the
+  // five PBR textures, the custom font-faces, and the hero portrait.
+  // Without this the user can scroll and trigger the space intro while
+  // backdrops are still invisible (cold cache, ~30 MB of STLs to fetch),
+  // producing a half-empty scene for the first second of the flythrough.
+  // We save the previous overflow value (the detail view also toggles it)
+  // and restore it in `finally` so a thrown await can't strand the page
+  // in a frozen scroll state.
+  const previousBodyOverflowY = document.body.style.overflowY;
+  document.body.style.overflowY = 'hidden';
+
+  try {
+    // Wait for the STL fetches kicked off by `preloadLandingEnvironment` to
+    // settle before consuming them in `loadLandingEnvironment`. Both calls hit
+    // the shared `stlGeometryCache`, so the second call is effectively free.
+    await preloadLandingEnvironment();
+    if (landingScene) {
+      loadLandingEnvironment(landingScene.scene);
+    }
+
+    // Block on the PBR textures. The shared `LoadingManager` resolves
+    // `texturesReady` once every color / displacement / metalness / normal
+    // / roughness map is decoded, or logs a warning and resolves anyway
+    // on error so a single broken texture never strands the page.
+    await texturesReady;
+
+    // Block on the custom font-faces declared in `global.css`
+    // (`Tron`, `8bit`, `PixeloidSans`). `document.fonts.ready` resolves
+    // when every @font-face has either finished loading or failed, so a
+    // broken font won't deadlock the page. Same pattern as
+    // `ExperienceDetail.astro`.
+    if (typeof document !== 'undefined' && document.fonts) {
+      await document.fonts.ready;
+    }
+
+    // Block on the hero portrait decode so the first time the page
+    // becomes interactive the portrait is in place.
+    await waitForHeroImage();
+
+    // Reveal the scroll-down arrow now that everything is ready and the
+    // user is about to be allowed to scroll. The element starts at
+    // `opacity-0` in CSS; the `transition-all duration-500` utility on it
+    // drives the fade-in once this class swap lands. Used as the visual
+    // signal that scrolling is unlocked.
+    const landingArrow = document.querySelector<HTMLElement>('#landing-arrow');
+    if (landingArrow) {
+      landingArrow.classList.add('opacity-100');
+    }
+
+    // Dismiss the "Cargando..." indicator that was pulsing above the
+    // arrow. We strip `animate-pulse` *before* the opacity fade-out so it
+    // doesn't keep blinking while it dissolves, then apply the same
+    // `opacity-0` swap used elsewhere so the same `transition-all
+    // duration-500` utility drives the fade.
+    const landingLoading = document.querySelector<HTMLElement>('#landing-loading');
+    if (landingLoading) {
+      landingLoading.classList.remove('animate-pulse');
+      landingLoading.classList.add('opacity-0');
+      // Remove from the layout after the fade so screen-readers and
+      // tab-order skip it. `transitionend` is more robust than a fixed
+      // timeout (covers `prefers-reduced-motion` disables cleanly).
+      const onTransitionEnd = () => {
+        landingLoading.classList.add('hidden');
+        landingLoading.removeEventListener('transitionend', onTransitionEnd);
+      };
+      landingLoading.addEventListener('transitionend', onTransitionEnd, { once: true });
+    }
+  } finally {
+    document.body.style.overflowY = previousBodyOverflowY;
   }
   
   // executed when the user scrolls back up
@@ -260,6 +343,9 @@ function startDriver(lang: Lang) {
   // show
   document.querySelector("#tutorial-overlay")?.classList.remove("hidden");
   
+  // deactivate the page scroll until the tutorial is finished or canceled
+  document.body.style.overflowY = 'hidden';
+  
   
   
   //  return if the tutorial has already been started more than x times (stored in localStorage)    
@@ -290,6 +376,7 @@ function startDriver(lang: Lang) {
       driverObj.destroy();
     },
     onDestroyed: () => { // when ended/canceled
+      document.body.style.overflowY = 'auto';
       document.querySelector("#cursor-icon-tutorial")?.classList.add("hidden");
       document.querySelector("#tutorial-overlay")?.classList.add("hidden");
     },
@@ -994,6 +1081,19 @@ export const initializeHomeLandingScene = async (lang: Lang = 'en') => {
     }
   });
 
+  // Prime the shared model cache for the disk + every title + every
+  // backdrop before the scene mounts. The subsequent calls inside
+  // `createHomeLandingThreeScene` (`loadLandingDisk`, `createLandingTitles`
+  // → `loadBackdrops`) hit the same cache and resolve synchronously, so
+  // by the time `buildLandingTimeline` finishes its other awaits the
+  // orchestration work is already done. Without this pre-warm the disk
+  // and the first backdrop can still be in flight when the user scrolls
+  // past the wait gate, producing a momentary empty section.
+  await Promise.all([
+    preloadLandingDisk(),
+    preloadLandingModels(lang),
+  ]);
+
   const landingScene = createHomeLandingThreeScene(overlay, lang);
   activeLandingScene = landingScene;
 
@@ -1059,16 +1159,9 @@ export const initializeHomeLandingScene = async (lang: Lang = 'en') => {
     detailToggle?.close();
   });
 
-  // Reveal the scroll-down arrow only after GSAP + Three.js + STL fetches
-  // + the landing timeline have all settled. The element starts hidden
-  // (opacity 0) in CSS and the class swap lets the `transition-all
-  // duration-500` utility on the element drive the fade-in.
-  const landingArrow = document.querySelector<HTMLElement>('#landing-arrow');
-  if (landingArrow) {
-    setTimeout(() => {
-      landingArrow.classList.add('opacity-100');
-    }, 50);
-  }
+  // The `#landing-arrow` reveal moved inside `buildLandingTimeline` so it
+  // is tied to the same condition that unlocks scroll (STLs + textures
+  // decoded). By the time we get here it is already visible.
 };
 
 

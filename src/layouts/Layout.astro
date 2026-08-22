@@ -50,6 +50,14 @@ const safeLang: Lang = isLang(lang) ? lang : 'en';
 		<link rel="preload" as="fetch" href="/3d/acerca de mi.stl" crossorigin="anonymous" />
 		<link rel="preload" as="fetch" href="/3d/contacto.stl" crossorigin="anonymous" />
 		<link rel="preload" as="fetch" href="/3d/proyectos.stl" crossorigin="anonymous" />
+		<!--
+		  Preload the hero portrait so the `waitForHeroImage()` gate inside
+		  `buildLandingTimeline` resolves as soon as the raster is decoded
+		  (instead of waiting for the next animation frame after the layout
+		  flushes). `fetchpriority="low"` matches the `<img>` attribute so
+		  the browser doesn't deprioritise other assets.
+		-->
+		<link rel="preload" as="image" href="/me.png" crossorigin="anonymous" fetchpriority="low" />
 
 		<ClientRouter  />
 	</head>

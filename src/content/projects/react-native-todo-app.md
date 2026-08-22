@@ -4,6 +4,7 @@ title:
   en: React native Todo App
 img: /projects/imgs/reactTodoApp.png
 importance: 2
+hidden: true
 technologies:
   es:
     - React native

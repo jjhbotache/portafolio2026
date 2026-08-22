@@ -3,7 +3,7 @@ title:
   es: Instagram follower bot
   en: Instagram follower bot
 img: /projects/imgs/memorable_instabot_flowchar.png
-importance: 4
+importance: 5
 technologies:
   es:
     - GCP
