@@ -5,7 +5,7 @@
     "og-title": "Portafolio de Juan José Huertas",
     "og-description": "Conozcámonos!",
     "og-image": "/img_es.png",
-    "og-url": "/",
+    "og-url": "/es",
     "og-locale": "es_ES",
 
     "hero-subtitle": "Javascript y Python developer",
@@ -60,7 +60,7 @@
     "og-title": "Juan José Huertas Portfolio",
     "og-description": "Meet me!",
     "og-image": "/img_en.png",
-    "og-url": "/",
+    "og-url": "/en",
     "og-locale": "en_US",
     
     "hero-subtitle": "Javascript and Python developer",
