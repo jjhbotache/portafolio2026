@@ -28,8 +28,8 @@ start:
   month: 10
   year: "2025"
 description:
-  es: Chatbot de IA para responder preguntas sobre una institución educativa, construido con Shadcn y la API de Gemini.
-  en: AI chatbot that answers questions about an educational institution, built with Shadcn and the Gemini API.
+  es: Enseñanza de python y scratch a estudiantes de secundaria y preparatoria en Algonova latinoamérica, una plataforma educativa, enfocándose en conceptos de programación, resolución de problemas y desarrollo de proyectos prácticos.
+  en: Teaching Python and Scratch to high school and preparatory students at Algonova Latin America, an educational platform, focusing on programming concepts, problem-solving, and practical project development.
 ---
 
 Placeholder. Reemplaza con la descripción completa del proyecto en markdown.

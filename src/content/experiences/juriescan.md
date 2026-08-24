@@ -59,8 +59,8 @@ end:
   month: 12
   year: "2025"
 description:
-  es: Diseño y desarrollo de la API multiservicios de Juriescan, una plataforma que permite acceder a información sobre procesos judiciales en Colombia, incluyendo antecedentes policiales, RUNT, Procuraduría y Contraloría, así como checkeo en redes sociales y generación de resúmenes utilizando la API de OpenAI.
-  en: Design and development of the multiservice API for Juriescan, a platform that provides access to information about judicial processes in Colombia, including police records, RUNT, Procuraduría, and Contraloría, as well as social media checks and summary generation using the OpenAI API.
+  es: Diseño y desarrollo de la API multiservicios de Juriescan, con funcionalidades para acceder a información sobre procesos judiciales y checkeo en redes sociales con uso de la API de OpenAI.
+  en: Design and development of the Juriescan multiservice API, with functionalities to access information about judicial processes and social media checks using the OpenAI API.
 ---
 
 Placeholder. Reemplaza con la descripción completa del proyecto en markdown.
