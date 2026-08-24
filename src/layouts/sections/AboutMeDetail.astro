@@ -55,7 +55,7 @@ const duplicatedRows = technologyCategories.map((category) => ({
   <div id="expanded-section-body" class="h-full w-full flex justify-center items-center text-white bg-linear-to-r from-black/20 via-black/50 to-black/20 bg-center bg-no-repeat backdrop-blur-3xl">
     <div class="max-w-md h-full flex flex-col items-center justify-evenly py-3 text-center gap-4 px-4 md:px-0">
       <p class="text-center text-sm xl:basis-full flex items-center justify-center 2xl:text-xl" id="aboutMeBodyText" data-source-text={t(lang, 'sections.aboutMe.body')} />
-      <a href="/cv.pdf" target="_blank" rel="noopener noreferrer" class="cv-download flex gap-2 hover:underline group"  >
+      <a href={lang === 'es' ? '/cv.pdf' : '/cv_en.pdf'} target="_blank" rel="noopener noreferrer" class="cv-download flex gap-2 hover:underline group"  >
         <span
           class="cv-download-label text-sm md:text-base font-semibold uppercase tracking-widest"
           data-lang={lang}

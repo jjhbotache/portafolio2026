@@ -158,17 +158,19 @@ const resolvedExperiences: ResolvedExperience[] = sortedExperiences.map((exp) =>
               </div>
               <div class="group text-xs md:text-sm">
                 <p class=" text-white/60 italic text-[0.5rem] " data-period-display >{exp.period}</p>
-                <p class=" text-white/80 leading-relaxed text-[0.65rem] ">
+                <p class=" text-white/80 leading-relaxed text-[0.65rem] max-h-[10vh] md:max-h-[20vh] overflow-y-auto">
                   {exp.description}
                   <span class="underline bold transition-all duration-300
-                  hover:opacity-80 hover:cursor-pointer"
+                  hover:opacity-80 hover:cursor-pointer "
                   onclick={`event.stopPropagation(); document.querySelector("#experienceCard-${exp.id}").classList.add('is-expanded')`}
                   >
                     {t(lang, 'experience.viewMore')+". . ."}
                   </span>
                 </p>
-                 <div class="experience-data-overlay 
-                  translate-y-full absolute bottom-0 left-0 w-full p-4 bg-black/70 backdrop-blur-sm flex-col gap-2 opacity-0 z-10
+                
+                {/* dataaaaaaaaaaaaaaaaaaaa */}
+                <div class="experience-data-overlay 
+                  translate-y-full absolute bottom-0 left-0 w-full p-4 bg-black/70 backdrop-blur-sm flex-col gap-2 opacity-0 z-10 max-h-[70%] 
                   transition-all duration-300
                   group-[.is-expanded]:flex group-active:flex
                   group-[.is-expanded]:translate-y-0 group-active:translate-y-0
@@ -176,7 +178,7 @@ const resolvedExperiences: ResolvedExperience[] = sortedExperiences.map((exp) =>
                   "
                   onclick={`event.stopPropagation(); document.querySelector("#experienceCard-${exp.id}").classList.toggle('is-expanded')`}
                   >
-                    <div class="flex flex-wrap justify-center gap-1.5">
+                    <div class="flex flex-wrap justify-center gap-1.5 ">
                     {exp.technologies.map((tech, i) => (
                       <span class={` text-xs px-2 py-1 rounded-full bg-secondary/15 text-secondary border border-secondary/30
                       opacity-0
@@ -189,8 +191,11 @@ const resolvedExperiences: ResolvedExperience[] = sortedExperiences.map((exp) =>
                       </span>
                     ))}
                     </div>
-                    <div id={`experienceContent-${exp.id}`} class="mt-2 text-sm text-white/70 leading-relaxed prose prose-invert max-w-none" set:html={exp.contentHtml} />
-                    <small class="text-xs text-white/50"> {t(lang, 'experience.closeDetail')} </small>
+                    
+                    <div id={`experienceContent-${exp.id}`} class="mt-2 text-sm text-white/70 leading-relaxed prose prose-invert max-w-none basis-full overflow-y-auto" set:html={exp.contentHtml} />
+                    
+                    <small class="text-xs text-white/50 basis-1/12"> {t(lang, 'experience.closeDetail')} </small>
+                    
                     <script is:inline define:vars={{ expId: exp.id }}>
                       document.addEventListener('DOMContentLoaded', () => {
                         const container = document.getElementById(`experienceContent-${expId}`);
@@ -202,7 +207,7 @@ const resolvedExperiences: ResolvedExperience[] = sortedExperiences.map((exp) =>
                         }
                       });
                     </script>
-                  </div>
+                </div>
               </div>
             </div>
             <!-- slider -->

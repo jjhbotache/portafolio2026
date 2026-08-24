@@ -15,6 +15,7 @@ export type TechnologyCategory = {
 const front: Technology[] = [
   { name: 'JavaScript', svgUrl: '/SVG/javascript.svg', technologyLink: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript' },
   { name: 'React', svgUrl: '/SVG/react.svg', technologyLink: 'https://react.dev' },
+  { name: 'Astro', svgUrl: '/SVG/astro.svg', technologyLink: 'https://astro.build' },
   { name: 'React Native', svgUrl: '/SVG/react native.svg', technologyLink: 'https://reactnative.dev' },
   { name: 'Redux Toolkit', svgUrl: '/SVG/redux.svg', technologyLink: 'https://redux.js.org' },
   { name: 'Styled Components', svgUrl: '/SVG/styledcomponents.svg', technologyLink: 'https://styled-components.com' },
